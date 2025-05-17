@@ -28,5 +28,29 @@ exclude = '''
  | buck-out
  | build
  | .__pycache__
+ |.pytest_cache
+ |.coverage
  )/
 '''
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["testa_*.py", "*_testa.py"]
+python_classes = ["Testa*"]
+python_functions = ["testa_*"]
+addopts = """
+    --strict-markers 
+    --tb=short 
+    --maxfail=1 
+    --cov=api_presentation
+    --cov=application_service
+    --cov=domain_entity
+    --cov=infra_repository
+    --cov-report=term-missing
+     
+"""
+markers = [
+  "slow: testes lentos",
+  "integration: testes de integração"
+]

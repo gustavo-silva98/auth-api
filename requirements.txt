@@ -2,3 +2,5 @@ blue
 ruff
 "fastapi[standard]"
 sqlalchemy
+pytest 
+pytest-cov

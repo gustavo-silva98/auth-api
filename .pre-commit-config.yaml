@@ -1,19 +1,21 @@
 repos:
-  - repo: local
+  - repo: https://github.com/grantjenks/blue
+    rev: v0.9.1
     hooks:
       - id: blue
         name: blue formatter
-        entry: blue
+        entry: python -m blue
         language: python
         types: [python]
 
-  - repo: local
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.4.4  # importante!
     hooks:
-      - id: ruff-check
+      - id: ruff
         name: ruff lint
         entry: ruff
         language: python
-        args: [ --fix ]
+        args: [--fix]
         types: [python]
   
 
@@ -23,11 +25,15 @@ repos:
     hooks:
       - id: mypy
         args: ["--ignore-missing-imports"]
+        entry: python -m mypy
+        language: system
 
-  - repo: https://github.com/PyCQA/bandit
-    # Serve para verificar padrões de código sem seguranca
-    rev: 1.7.5
+  # Bandit usando python -m para evitar o .EXE bloqueado
+  - repo: local
     hooks:
-      - id: bandit
-        args: ["-q", "--confidence-level", "LOW"]
-      
+      - id: bandit-local
+        name: bandit security checks
+        entry: python -m bandit
+        language: system
+        args: ["-q", "--confidence-level", "low"]
+        types: [python]
