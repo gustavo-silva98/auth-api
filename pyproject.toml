@@ -14,9 +14,9 @@ select = [
 [tool.ruff.format]
 quote-style = "single"  
 
-[tool.black]
-line-lenght = 79
-include = '\.piy?$'
+[tool.blue]
+line-length = 79
+include = '\.pyi?$'
 exclude = '''
 /(
   \.git
@@ -27,10 +27,10 @@ exclude = '''
  | _build
  | buck-out
  | build
- | .__pycache__
- |.pytest_cache
- |.coverage
- )/
+ | __pycache__
+ | \.pytest_cache
+ | \.coverage
+)/
 '''
 
 
