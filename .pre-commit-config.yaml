@@ -37,3 +37,4 @@ repos:
         language: system
         args: ["-q", "--confidence-level", "low"]
         types: [python]
+        exclude: tests/.*

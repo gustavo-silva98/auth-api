@@ -16,5 +16,7 @@ class User(Base):
     password: Mapped[str]
 
     def __repr__(self) -> str:
-        return f'User (id={self.id}, username={self.username},'
-        f'email={self.email}, fullname={self.fullname})'
+        return (
+            f'User (id={self.id}, username={self.username},'
+            f'email={self.email}, fullname={self.fullname})'
+        )
