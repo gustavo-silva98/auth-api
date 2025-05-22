@@ -6,4 +6,4 @@ load_dotenv()
 
 
 class Settings:
-    DB_URL = os.getenv('DB_URL')
+    DB_URL : str = os.getenv('DB_URL')
