@@ -3,7 +3,7 @@ repos:
     rev: v0.9.1
     hooks:
       - id: blue
-        name: blue formatter
+        name: blue
         entry: python -m blue
         language: python
         types: [python]
