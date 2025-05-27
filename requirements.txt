@@ -4,3 +4,5 @@ ruff
 sqlalchemy
 pytest 
 pytest-cov
+httpx
+email-validator
