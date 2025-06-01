@@ -4,11 +4,6 @@ class AppException(Exception):
         self.code = code
 
 
-class InvalidCredentialsError(AppException):
-    def __init__(self, message: str = 'Credenciais inválidas'):
-        super().__init__(message, code='AUTH_INVALID_CREDENTIALS')
-
-
 class DuplicateUserError(AppException):
     def __init__(self, message: str = 'Usuário Duplicado'):
         super().__init__(message, code='AUTH_USER_DUPLICATE')
