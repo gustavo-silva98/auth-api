@@ -1,8 +1,16 @@
 blue
 ruff
-"fastapi[standard]"
+fastapi[standard]
 sqlalchemy
 pytest 
 pytest-cov
 httpx
 email-validator
+pytest-asyncio
+passlib
+pydantic-settings
+bcrypt
+aiosqlite
+pre-commit
+mypy
+bandit
