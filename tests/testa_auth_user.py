@@ -125,7 +125,7 @@ async def testa_service_create_user_duplicated(user_create_dto, get_hasher):
 
     return_mock = mock_user_from_db
 
-    user_crud.get_user_by_email = AsyncMock(retur_value=return_mock)
+    user_crud.get_user_by_email = AsyncMock(return_value=return_mock)
     mock_settings = Mock()
     mock_token_service = Mock()
     auth_service = AuthService(
