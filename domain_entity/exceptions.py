@@ -15,3 +15,13 @@ class PasswordNotMatch(AppException):
         message: str = ('As senhas não são iguais. Por gentileza, ' 'validar'),
     ):
         super().__init__(message, code='AUTH_USER_DONT_MATCH')
+
+
+class WrongPassword(AppException):
+    def __init__(self, message: str = 'Senha inválida.'):
+        super().__init__(message, code='AUTH_USER_WRONG_PASSWORD')
+
+
+class UserNotCreated(AppException):
+    def __init__(self, message: str = 'Usuário não encontrado'):
+        super().__init__(message, code='AUTH_USER_NOT_CREATED')

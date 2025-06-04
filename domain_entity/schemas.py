@@ -18,3 +18,14 @@ class UserFromDBDTO(BaseModel):
     username: str
     email: str
     fullname: str
+
+
+class AuthRequestDTO(BaseModel):
+    username: str = Field(
+        min_length=6,
+        max_length=20,
+        description='Username/Login do usuário enviado para autenticação.',
+    )
+    password: str = Field(
+        description='Campo de envio de password para autenticação.'
+    )

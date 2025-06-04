@@ -37,3 +37,14 @@ class UserCRUD:
         result = await async_transaction.execute(delete(User))
 
         return result.rowcount
+
+    @staticmethod
+    async def get_user_by_username(
+        username: str, async_transaction: AsyncSession
+    ) -> User | None:
+
+        query = select(User).where(User.username == username)
+
+        result = await async_transaction.execute(query)
+
+        return result.scalar_one_or_none()
