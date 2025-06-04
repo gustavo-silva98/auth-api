@@ -268,7 +268,6 @@ async def testa_authenticate_get_token_user_valid(
         token_service=mock_token_service,
     )
     auth_dto = auth_request_dto
-    print(auth_dto.password)
 
     result = await auth_service.authenticate_get_token(auth_dto)
 
