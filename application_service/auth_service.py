@@ -1,8 +1,10 @@
+from datetime import timedelta
 from typing import Protocol
 
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application_service.token_service import TokenService
 from domain_entity.exceptions import (
     DuplicateUserError,
     PasswordNotMatch,
@@ -10,8 +12,14 @@ from domain_entity.exceptions import (
     WrongPassword,
 )
 from domain_entity.models import User
-from domain_entity.schemas import AuthRequestDTO, UserCreateDTO
+from domain_entity.schemas import (
+    AuthRequestDTO,
+    Token,
+    UserCreateDTO,
+    UserFromDBDTO,
+)
 from infra_repository.crud import UserCRUD
+from settings import Settings
 
 
 class HasherProtocol(Protocol):
@@ -35,13 +43,22 @@ class BcryptHasher(HasherProtocol):
 
 class AuthService:
     def __init__(
-        self, hasher: HasherProtocol, user_crud: UserCRUD, db: AsyncSession
+        self,
+        hasher: HasherProtocol,
+        user_crud: UserCRUD,
+        db: AsyncSession,
+        settings: Settings,
+        token_service: TokenService,
     ):
         self.hasher = hasher
         self.user_crud = user_crud
         self.db = db
+        self.settings = settings
+        self.token_service = token_service
 
-    async def create_user_from_route(self, user: UserCreateDTO) -> User:
+    async def create_user_from_route(
+        self, user: UserCreateDTO
+    ) -> UserFromDBDTO:
 
         get_user = await self.user_crud.get_user_by_email(
             email=user.email, async_transaction=self.db
@@ -65,15 +82,36 @@ class AuthService:
             self.db,
         )
 
-        return result
+        if result is None:
+            raise UserNotCreated(message='Falha na criação do usuário.')
 
-    async def authenticate_get_token(self, auth_request: AuthRequestDTO):
+        return UserFromDBDTO(
+            id=result.id,
+            username=result.username,
+            email=result.email,
+            fullname=result.fullname,
+        )
+
+    async def authenticate_get_token(
+        self, auth_request: AuthRequestDTO
+    ) -> Token:
         get_user = await self.user_crud.get_user_by_username(
             auth_request.username, async_transaction=self.db
         )
         if get_user is None:
             raise UserNotCreated()
 
-        if self.hasher.verify(auth_request.password, get_user.password):
-            print('PRINT WRONG PASSWORD')
+        if not self.hasher.verify(auth_request.password, get_user.password):
+
             raise WrongPassword()
+
+        token_expire = timedelta(
+            minutes=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+
+        access_token = self.token_service.create_access_token(
+            auth_request.username, expires_delta=token_expire
+        )
+        return Token(
+            access_token=access_token, token_type='bearer'
+        )   # nosec: B106
