@@ -15,9 +15,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(unique=True)
     fullname: Mapped[str]
     password: Mapped[str]
+    active: Mapped[bool]
 
     def __repr__(self) -> str:
         return (
             f'User (id={self.id}, username={self.username},'
-            f'email={self.email}, fullname={self.fullname})'
+            f'email={self.email}, fullname={self.fullname}, active={self.active})'
         )

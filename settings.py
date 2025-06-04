@@ -9,3 +9,6 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
     DB_URL: str = Field(default='', min_length=1)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
+    SECRET_KEY: str = Field(default='')
+    ALGORITHM: str = Field(default='')

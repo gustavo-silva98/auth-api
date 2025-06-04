@@ -7,7 +7,14 @@ def testa_columns():
     inspector = inspect(User)
 
     columns_name = {col.name for col in inspector.columns}
-    assert columns_name == {'id', 'username', 'email', 'fullname', 'password'}
+    assert columns_name == {
+        'id',
+        'username',
+        'email',
+        'fullname',
+        'password',
+        'active',
+    }
 
     username_column = inspector.columns.username
 
@@ -24,13 +31,14 @@ def testa_repr():
         email='teste@teste.com',
         fullname='teste da silva',
         password='teste',
+        active=True,
     )
 
     user.id = 13
 
     user_expected = (
         'User (id=13, username=teste,'
-        'email=teste@teste.com, fullname=teste da silva)'
+        'email=teste@teste.com, fullname=teste da silva, active=True)'
     )
 
     assert repr(user) == user_expected
