@@ -29,3 +29,8 @@ class AuthRequestDTO(BaseModel):
     password: str = Field(
         description='Campo de envio de password para autenticação.'
     )
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
