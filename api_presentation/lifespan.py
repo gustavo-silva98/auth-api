@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from domain_entity.models import Base
-from infra_repository.db import engine
+from infra_repository.db import DatabaseHandler
 
 
 @asynccontextmanager
