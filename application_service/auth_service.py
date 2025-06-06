@@ -22,6 +22,13 @@ from infra_repository.crud import UserCRUD
 from settings import Settings
 
 
+class AuthServiceProtocol(Protocol):
+    async def create_user_from_route(self,user: UserCreateDTO)-> UserFromDBDTO:
+        ...
+
+    async def authenticate_get_token(self,auth_request:AuthRequestDTO)-> Token:
+        ...
+        
 class HasherProtocol(Protocol):
     def hash(self, password: str) -> str:
         ...   # pragma: no cover

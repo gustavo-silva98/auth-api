@@ -12,7 +12,7 @@ from domain_entity.models import Base
 from settings import Settings
 
 
-# Interface de handler de banco de dados.
+# Classe de handler de banco de dados.
 class DatabaseHandler:
     def __init__(self, settings: Settings, base: type[DeclarativeBase] = Base):
         self.base = base
@@ -34,3 +34,8 @@ class DatabaseHandler:
     async def get_db_session(self) -> AsyncGenerator[AsyncSession, None]:
         async for session in self.get_db():
             yield session
+
+
+settings = Settings()
+db_handler = DatabaseHandler(settings=settings,base=Base)
+
