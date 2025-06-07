@@ -1,10 +1,15 @@
 class AppException(Exception):
     def __init__(
-        self, message: str, code: str = 'APP_ERROR', status_code: int = 500
+        self,
+        message: str,
+        code: str = 'APP_ERROR',
+        status_code: int = 500,
+        headers: dict[str, str] | None = None,
     ):
         self.message = message
         self.code = code
         self.status_code = status_code
+        self.headers = headers or {}
 
 
 class DuplicateUserError(AppException):
@@ -20,10 +25,13 @@ class PasswordNotMatch(AppException):
         super().__init__(message, code='AUTH_USER_DONT_MATCH', status_code=409)
 
 
-class WrongPassword(AppException):
-    def __init__(self, message: str = 'Senha inválida.'):
+class UnauthorizedException(AppException):
+    def __init__(self, message: str = 'Could not validate credentials'):
         super().__init__(
-            message, code='AUTH_USER_WRONG_PASSWORD', status_code=401
+            message,
+            code='AUTH_INVALID_CREDENTIALS',
+            status_code=401,
+            headers={'WWW-Authenticate': 'Bearer'},
         )
 
 

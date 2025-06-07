@@ -1,11 +1,12 @@
 from datetime import UTC, datetime, timedelta
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import jwt
 
 from settings import Settings
 
 
+@runtime_checkable
 class TokenService(Protocol):
     def create_access_token(
         self, username: str, expires_delta: timedelta | None
