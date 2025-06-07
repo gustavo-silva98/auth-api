@@ -14,5 +14,6 @@ aiosqlite
 pre-commit
 mypy
 bandit
-jwt
+PyJWT
 types-PyJWT
+asyncpg
