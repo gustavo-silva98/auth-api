@@ -15,3 +15,5 @@ pre-commit
 mypy
 bandit
 PyJWT
+types-PyJWT
+asyncpg
