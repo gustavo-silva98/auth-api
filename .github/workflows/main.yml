@@ -49,7 +49,7 @@ jobs:
     
     - name: Run tests
       env:
-        TEST_DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+        DB_URL: postgresql+asyncpg://test:test@localhost:5432/test
       run: |
         pytest -v --cov=.
 
