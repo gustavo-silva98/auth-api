@@ -1,12 +1,12 @@
 from unittest.mock import AsyncMock, MagicMock, Mock
 
-import jwt
 import pytest
+from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application_service.auth_service import AuthService, BcryptHasher
-from application_service.token_service import JWTLib, JWTTokenService
+from application_service.token_service import JWTLibHandler, JWTTokenService
 from domain_entity.exceptions import (
     DuplicateUserError,
     PasswordNotMatch,
@@ -15,7 +15,6 @@ from domain_entity.exceptions import (
 )
 from domain_entity.models import User
 from domain_entity.schemas import (
-    AuthRequestDTO,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -51,8 +50,7 @@ def get_hasher():
 @pytest.fixture
 def get_token_service():
     settings = Settings()
-    py_jwt = jwt.PyJWT()
-    jwt_handler = JWTLib(py_jwt)
+    jwt_handler = JWTLibHandler()
     return JWTTokenService(jwt_handler=jwt_handler, settings=settings)
 
 
@@ -85,7 +83,9 @@ def mock_user_class():
 
 @pytest.fixture
 def auth_request_dto():
-    return AuthRequestDTO(username='username_teste', password='password_teste')
+    return OAuth2PasswordRequestForm(
+        username='username_teste', password='password_teste'
+    )
 
 
 async def testa_service_create_user_valido(

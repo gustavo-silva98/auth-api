@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
+import jwt
+
 from settings import Settings
 
 
@@ -16,12 +18,10 @@ class JWTHandler(Protocol):
         ...   # pragma: no cover
 
 
-class JWTLib(JWTHandler):
-    def __init__(self, jwt_lib: JWTHandler):
-        self.jwt = jwt_lib
-
+class JWTLibHandler(JWTHandler):
     def encode(self, payload: dict, key: str, algorithm: str) -> str:
-        return self.jwt.encode(payload, key, algorithm)
+        encode = jwt.encode(payload, key, algorithm)
+        return encode
 
 
 class JWTTokenService(TokenService):

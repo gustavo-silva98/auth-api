@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-import jwt
 from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ from application_service.auth_service import (
     HasherProtocol,
 )
 from application_service.token_service import (
-    JWTLib,
+    JWTLibHandler,
     JWTTokenService,
     TokenService,
 )
@@ -27,7 +27,8 @@ _crypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async for session in db_handler.get_db():
-        yield session
+        async with session.begin():
+            yield session
 
 
 def get_bcrypt_hasher():
@@ -47,8 +48,7 @@ def get_settings() -> Settings:
 
 def get_jwt_token_service() -> TokenService:
     settings = Settings()
-    py_jwt = jwt.PyJWT()
-    jwt_handler = JWTLib(py_jwt)
+    jwt_handler = JWTLibHandler()
     return JWTTokenService(jwt_handler=jwt_handler, settings=settings)
 
 
@@ -67,3 +67,6 @@ def get_auth_service(
         settings=settings,
         token_service=token_service,
     )
+
+
+oauth_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth-token')
