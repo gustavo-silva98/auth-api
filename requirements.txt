@@ -9,7 +9,7 @@ email-validator
 pytest-asyncio
 passlib
 pydantic-settings
-bcrypt
+bcrypt==4.0.1
 aiosqlite
 pre-commit
 mypy

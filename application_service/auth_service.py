@@ -1,6 +1,7 @@
 from datetime import timedelta
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
+from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,12 +9,11 @@ from application_service.token_service import TokenService
 from domain_entity.exceptions import (
     DuplicateUserError,
     PasswordNotMatch,
+    UnauthorizedException,
     UserNotCreated,
-    WrongPassword,
 )
 from domain_entity.models import User
 from domain_entity.schemas import (
-    AuthRequestDTO,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -22,13 +22,20 @@ from infra_repository.crud import UserCRUD
 from settings import Settings
 
 
+@runtime_checkable
 class AuthServiceProtocol(Protocol):
-    async def create_user_from_route(self,user: UserCreateDTO)-> UserFromDBDTO:
-        ...
+    async def create_user_from_route(
+        self, user: UserCreateDTO
+    ) -> UserFromDBDTO:
+        ...   # pragma: no cover
 
-    async def authenticate_get_token(self,auth_request:AuthRequestDTO)-> Token:
-        ...
-        
+    async def authenticate_get_token(
+        self, auth_request: OAuth2PasswordRequestForm
+    ) -> Token:
+        ...   # pragma: no cover
+
+
+@runtime_checkable
 class HasherProtocol(Protocol):
     def hash(self, password: str) -> str:
         ...   # pragma: no cover
@@ -85,6 +92,7 @@ class AuthService:
                 email=user.email,
                 fullname=user.fullname,
                 password=pwd_hash,
+                active=True,
             ),
             self.db,
         )
@@ -100,7 +108,7 @@ class AuthService:
         )
 
     async def authenticate_get_token(
-        self, auth_request: AuthRequestDTO
+        self, auth_request: OAuth2PasswordRequestForm
     ) -> Token:
         get_user = await self.user_crud.get_user_by_username(
             auth_request.username, async_transaction=self.db
@@ -110,7 +118,7 @@ class AuthService:
 
         if not self.hasher.verify(auth_request.password, get_user.password):
 
-            raise WrongPassword()
+            raise UnauthorizedException()
 
         token_expire = timedelta(
             minutes=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES

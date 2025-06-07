@@ -1,21 +1,20 @@
 from unittest.mock import AsyncMock, MagicMock, Mock
 
-import jwt
 import pytest
+from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application_service.auth_service import AuthService, BcryptHasher
-from application_service.token_service import JWTLib, JWTTokenService
+from application_service.token_service import JWTLibHandler, JWTTokenService
 from domain_entity.exceptions import (
     DuplicateUserError,
     PasswordNotMatch,
+    UnauthorizedException,
     UserNotCreated,
-    WrongPassword,
 )
 from domain_entity.models import User
 from domain_entity.schemas import (
-    AuthRequestDTO,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -51,8 +50,7 @@ def get_hasher():
 @pytest.fixture
 def get_token_service():
     settings = Settings()
-    py_jwt = jwt.PyJWT()
-    jwt_handler = JWTLib(py_jwt)
+    jwt_handler = JWTLibHandler()
     return JWTTokenService(jwt_handler=jwt_handler, settings=settings)
 
 
@@ -85,7 +83,9 @@ def mock_user_class():
 
 @pytest.fixture
 def auth_request_dto():
-    return AuthRequestDTO(username='username_teste', password='password_teste')
+    return OAuth2PasswordRequestForm(
+        username='username_teste', password='password_teste'
+    )
 
 
 async def testa_service_create_user_valido(
@@ -116,6 +116,32 @@ async def testa_service_create_user_valido(
 
     assert result == mock_return
     user_crud.insert_user.assert_called_once()
+
+
+async def testa_service_create_user_none(
+    user_create_dto, mock_user_from_db, get_hasher
+):
+
+    mock_db = AsyncMock(spec=AsyncSession)
+
+    user_create = user_create_dto
+
+    user_crud = UserCRUD()
+    mock_settings = Mock()
+    mock_token_service = Mock()
+    auth_service = AuthService(
+        get_hasher,
+        user_crud=user_crud,
+        db=mock_db,
+        settings=mock_settings,
+        token_service=mock_token_service,
+    )
+
+    user_crud.insert_user = AsyncMock(return_value=None)
+    user_crud.get_user_by_email = AsyncMock(return_value=None)
+
+    with pytest.raises(UserNotCreated):
+        await auth_service.create_user_from_route(user=user_create)
 
 
 async def testa_service_create_user_duplicated(user_create_dto, get_hasher):
@@ -210,7 +236,7 @@ async def testa_authenticate_get_token_pwd_unmatch(
     )
     auth_dto = auth_request_dto
 
-    with pytest.raises(WrongPassword):
+    with pytest.raises(UnauthorizedException):
         await auth_service.authenticate_get_token(auth_dto)
 
 
@@ -272,3 +298,12 @@ async def testa_authenticate_get_token_user_valid(
     result = await auth_service.authenticate_get_token(auth_dto)
 
     assert isinstance(result, Token)
+
+
+# Testes Bcrypt Hasher estão abaixo :
+
+
+def testa_bcrypt_hash(get_hasher):
+    hash = get_hasher.hash('senha_teste')
+
+    assert get_hasher.verify('senha_teste', hash)
