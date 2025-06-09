@@ -3,7 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
-from api_presentation.dependencies import get_auth_service, oauth_scheme
+from api_presentation.dependencies import (
+    get_auth_service,
+    oauth_scheme,
+)
 from application_service.auth_service import AuthServiceProtocol
 from domain_entity.schemas import Token, UserCreateDTO, UserFromDBDTO
 
@@ -25,6 +28,15 @@ async def auth_get_token(
 ):
 
     return await auth_service.authenticate_get_token(user_data)
+
+
+@auth_router.post('/refresh')
+async def refresh_access_token(
+    refresh_token: str,
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+):
+
+    return await auth_service.refresh_access_token(refresh_token)
 
 
 @auth_router.get('/protected-route')

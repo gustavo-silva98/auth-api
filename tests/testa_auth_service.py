@@ -11,7 +11,7 @@ from domain_entity.exceptions import (
     DuplicateUserError,
     PasswordNotMatch,
     UnauthorizedException,
-    UserNotCreated,
+    UserNotFound,
 )
 from domain_entity.models import User
 from domain_entity.schemas import (
@@ -140,7 +140,7 @@ async def testa_service_create_user_none(
     user_crud.insert_user = AsyncMock(return_value=None)
     user_crud.get_user_by_email = AsyncMock(return_value=None)
 
-    with pytest.raises(UserNotCreated):
+    with pytest.raises(UserNotFound):
         await auth_service.create_user_from_route(user=user_create)
 
 
@@ -263,7 +263,7 @@ async def testa_authenticate_get_token_user_invalid(
         token_service=mock_token_service,
     )
 
-    with pytest.raises(UserNotCreated):
+    with pytest.raises(UserNotFound):
 
         await auth_service.authenticate_get_token(auth_dto)
 
