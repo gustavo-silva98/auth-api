@@ -26,6 +26,8 @@ from settings import Settings
 
 @runtime_checkable
 class AuthServiceProtocol(Protocol):
+    user_crud: UserCRUD
+
     async def create_user_from_route(
         self, user: UserCreateDTO
     ) -> UserFromDBDTO:

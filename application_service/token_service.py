@@ -11,7 +11,7 @@ class JWTHandler(Protocol):
         ...   # pragma: no cover
 
     def decode(self, jwt_token: str, key: str, algorithm: str) -> dict:
-        ...
+        ...   # pragma: no cover
 
 
 class JWTLibHandler(JWTHandler):
