@@ -35,8 +35,15 @@ class UnauthorizedException(AppException):
         )
 
 
-class UserNotCreated(AppException):
+class UserNotFound(AppException):
     def __init__(self, message: str = 'Usuário não encontrado'):
         super().__init__(
             message, code='AUTH_USER_NOT_CREATED', status_code=404
         )
+
+
+class BadRequest(AppException):
+    def __init__(
+        self, message: str = 'Bad Request, avalie a request novamente.'
+    ):
+        super().__init__(message, code='AUTH_BAD_REQUEST', status_code=400)

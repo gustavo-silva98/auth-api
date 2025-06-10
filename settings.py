@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     )
     DB_URL: str = Field(default='', min_length=1)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=15)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
     SECRET_KEY: str = Field(default='')
-    ALGORITHM: str = Field(default='')
+    ALGORITHM: str = Field(default='H256')
