@@ -8,7 +8,12 @@ from api_presentation.dependencies import (
     oauth_scheme,
 )
 from application_service.auth_service import AuthServiceProtocol
-from domain_entity.schemas import Token, UserCreateDTO, UserFromDBDTO
+from domain_entity.schemas import (
+    RefreshTokenRequest,
+    Token,
+    UserCreateDTO,
+    UserFromDBDTO,
+)
 
 auth_router = APIRouter()
 
@@ -32,7 +37,7 @@ async def auth_get_token(
 
 @auth_router.post('/refresh')
 async def refresh_access_token(
-    refresh_token: str,
+    refresh_token: RefreshTokenRequest,
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
 

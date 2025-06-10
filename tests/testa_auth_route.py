@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 from api_presentation.auth_router import auth_router
 from api_presentation.dependencies import get_auth_service
 from application_service.auth_service import AuthServiceProtocol
-from domain_entity.schemas import Token, UserCreateDTO, UserFromDBDTO
+from domain_entity.schemas import (
+    RefreshTokenRequest,
+    Token,
+    UserCreateDTO,
+    UserFromDBDTO,
+)
 from infra_repository.crud import UserCRUD
 
 
@@ -106,14 +111,12 @@ async def testa_refresh_token_success(client, mock_auth_service):
 
     refresh_data = {'refresh_token': 'old_refresh'}
 
-    response = client.post(
-        '/refresh?refresh_token=old_refresh', json=refresh_data
-    )
+    response = client.post('/refresh', json=refresh_data)
 
     assert response.status_code == 200
     assert response.json() == new_token.model_dump()
     mock_auth_service.refresh_access_token.assert_called_once_with(
-        'old_refresh'
+        RefreshTokenRequest(refresh_token='old_refresh')
     )
 
 

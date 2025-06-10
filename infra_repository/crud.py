@@ -48,3 +48,11 @@ class UserCRUD:
         result = await async_transaction.execute(query)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_users(async_transaction: AsyncSession):
+
+        query = select(User)
+
+        result = await async_transaction.execute(query)
+        return result.scalars()

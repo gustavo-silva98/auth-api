@@ -8,24 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application_service.auth_service import AuthService, BcryptHasher
 from application_service.token_service import JWTLibHandler, JWTTokenService
 from domain_entity.exceptions import (
+    BadRequest,
     DuplicateUserError,
     PasswordNotMatch,
     UnauthorizedException,
     UserNotFound,
 )
 from domain_entity.models import User
-from domain_entity.schemas import (
-    Token,
-    UserCreateDTO,
-    UserFromDBDTO,
-)
+from domain_entity.schemas import Token, UserCreateDTO, UserFromDBDTO
 from infra_repository.crud import UserCRUD
 from settings import Settings
 
 """
 Métodos AuthService
 - create_user_from_route - OK
-- login_user_from_route - //TODO
+- login_user_from_route - OK
 """
 
 
@@ -85,6 +82,19 @@ def mock_user_class():
 def auth_request_dto():
     return OAuth2PasswordRequestForm(
         username='username_teste', password='password_teste'
+    )
+
+
+@pytest.fixture
+def get_auth_service(get_hasher, get_settings, get_token_service):
+    user_crud = UserCRUD()
+    mock_db = AsyncMock(spec=AsyncSession)
+    return AuthService(
+        get_hasher,
+        user_crud=user_crud,
+        db=mock_db,
+        settings=get_settings,
+        token_service=get_token_service,
     )
 
 
@@ -307,3 +317,32 @@ def testa_bcrypt_hash(get_hasher):
     hash = get_hasher.hash('senha_teste')
 
     assert get_hasher.verify('senha_teste', hash)
+
+
+async def testa_refresh_access_token_bad_request(
+    get_token_service, get_auth_service
+):
+    token_service = get_token_service
+    jwt_hand = token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+
+    jwt_hand.decode.return_value = {'token_type': 'not_refresh'}
+
+    auth_service = get_auth_service
+
+    with pytest.raises(BadRequest):
+        await auth_service.refresh_access_token('refresh_teste')
+
+
+async def testa_refresh_access_token_user_not_found(
+    get_token_service, get_auth_service
+):
+    token_service = get_token_service
+    auth_service = get_auth_service
+    jwt_hand = token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    jwt_hand.decode.return_value = {'sub': 'username', 'token_type': 'refresh'}
+    auth_service.user_crud.get_user_by_username.return_value = None
+
+    with pytest.raises(UserNotFound):
+        await auth_service.refresh_access_token('refresh_teste')

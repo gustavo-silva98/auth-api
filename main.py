@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from api_presentation.auth_router import auth_router
 from api_presentation.lifespan import lifespan
+from api_presentation.user_router import user_router
 from domain_entity.exceptions import AppException
 
 app = FastAPI(lifespan=lifespan)
@@ -18,6 +19,7 @@ async def app_exception_handler(request: Request, exc: AppException):
 
 
 app.include_router(router=auth_router, prefix='/auth', tags=['auth'])
+app.include_router(router=user_router, prefix='/users', tags=['users'])
 
 
 @app.get('/health')

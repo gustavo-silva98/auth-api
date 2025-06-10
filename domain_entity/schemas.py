@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreateDTO(BaseModel):
@@ -14,6 +14,7 @@ class UserCreateDTO(BaseModel):
 
 
 class UserFromDBDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     username: str
     email: str
@@ -24,3 +25,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

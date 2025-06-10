@@ -16,6 +16,7 @@ from domain_entity.exceptions import (
 )
 from domain_entity.models import User
 from domain_entity.schemas import (
+    RefreshTokenRequest,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -38,8 +39,13 @@ class AuthServiceProtocol(Protocol):
     ) -> Token:
         ...   # pragma: no cover
 
-    async def refresh_access_token(self, refresh_token: str) -> Token:
-        ...
+    async def refresh_access_token(
+        self, refresh_token: RefreshTokenRequest
+    ) -> Token:
+        ...   # pragma: no cover
+
+    async def get_users(self):
+        ...   # pragma: no cover
 
 
 @runtime_checkable
@@ -165,10 +171,10 @@ class AuthService:
             token_type='bearer',
         )   # nosec: B106
 
-    async def refresh_access_token(self, refresh_token: str):
+    async def refresh_access_token(self, refresh_token: RefreshTokenRequest):
         try:
             payload = self.token_service.jwt_handler.decode(
-                jwt_token=refresh_token,
+                jwt_token=str(refresh_token),
                 key=self.settings.SECRET_KEY,
                 algorithm=self.settings.ALGORITHM,
             )
@@ -182,7 +188,7 @@ class AuthService:
             if get_user is None:
                 raise UserNotFound()
             # Se usuário foi encontrado, cria novo access token e refresh_token
-            acces_token_expire = timedelta(
+            access_token_expire = timedelta(
                 minutes=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES
             )
             refresh_token_expire = timedelta(
@@ -190,7 +196,7 @@ class AuthService:
             )
 
             access_token = self.token_service.create_access_token(
-                get_user.username, expires_delta=acces_token_expire
+                get_user.username, expires_delta=access_token_expire
             )
             new_refresh_token = self.token_service.create_refresh_token(
                 get_user.username, expires_delta=refresh_token_expire
@@ -204,3 +210,11 @@ class AuthService:
 
         except PyJWTError as err:
             raise UnauthorizedException() from err
+
+    async def get_users(self):
+        users = await self.user_crud.get_users(async_transaction=self.db)
+        if not users:
+            return []
+        if isinstance(users, User):
+            users = [users]
+        return [UserFromDBDTO.model_validate(u) for u in users]
