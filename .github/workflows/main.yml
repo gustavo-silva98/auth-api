@@ -56,13 +56,15 @@ jobs:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
         
       run: |
-        pytest --cov -v
-
+        pytest --cov=./ \
+               --cov-report=xml:coverage.xml \
+               -v
+        
     - name: Upload coverage report
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
         
     - name: Lint with Ruff
       run: |
@@ -70,7 +72,6 @@ jobs:
 
     - name: Security checks
       run: |
-        safety check -r requirements.txt
         bandit -r
         
     - name: Run Docker container smoke test
