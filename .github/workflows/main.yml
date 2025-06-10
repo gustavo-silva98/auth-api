@@ -72,7 +72,7 @@ jobs:
 
     - name: Security checks
       run: |
-        bandit -r . --confidence-level low -v --exclude=tests,tests/*
+        bandit -r . --confidence-level low -v --exclude=tests,./tests/*
         
     - name: Run Docker container smoke test
       run: |
