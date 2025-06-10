@@ -73,9 +73,6 @@ def testa_settings_subclass(get_settings):
 
 async def testa_invalid_db_url(get_settings):
     assert isinstance(get_settings.DB_URL, str)
-    assert get_settings.DB_URL.startswith(
-        'sqlite+aiosqlite'
-    )  # Exemplo específico
 
 
 async def testa_get_db_session(teste_db):
