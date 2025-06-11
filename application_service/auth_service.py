@@ -44,7 +44,10 @@ class AuthServiceProtocol(Protocol):
     ) -> Token:
         ...   # pragma: no cover
 
-    async def get_users(self):
+    async def get_users(self) -> list:
+        ...   # pragma: no cover
+
+    async def get_users_me(self, token) -> UserFromDBDTO:
         ...   # pragma: no cover
 
 
@@ -123,24 +126,7 @@ class AuthService:
     async def authenticate_get_token(
         self, auth_request: OAuth2PasswordRequestForm
     ) -> Token:
-        """
-        Propósito: Autentica via rota de login da forma Usuario e senha.
 
-        Args:
-            auth_request = Formulário Oauth2 que contém `username` e
-            `password` como attrs.
-        Return:
-            Token = Pydantic schema que valida o corpo do token;
-
-        ### Fluxo:
-
-            Se Usuario não existe no banco:
-                -> Levanta exceção
-            Se senha está incorreta:
-                -> Levanta exceção
-            Cria token de acesso e refresh token.
-            Retorna token.
-        """
         get_user = await self.user_crud.get_user_by_username(
             auth_request.username, async_transaction=self.db
         )
@@ -218,3 +204,22 @@ class AuthService:
         if isinstance(users, User):
             users = [users]
         return [UserFromDBDTO.model_validate(u) for u in users]
+
+    async def get_users_me(self, token: str) -> UserFromDBDTO:
+        try:
+            payload = self.token_service.jwt_handler.decode(
+                token, self.settings.SECRET_KEY, self.settings.ALGORITHM
+            )
+            username = payload.get('sub')
+            if username is None:
+                raise UnauthorizedException()
+
+        except PyJWTError as err:
+            raise UnauthorizedException() from err
+
+        get_user = await self.user_crud.get_user_by_username(
+            username=username, async_transaction=self.db
+        )
+        if get_user is None:
+            raise UnauthorizedException()
+        return UserFromDBDTO.model_validate(get_user)
