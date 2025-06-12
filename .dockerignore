@@ -1,0 +1,11 @@
+meu_banco.db
+LICENSE
+README.MD
+.env-example
+.venv
+__pycache__
+.pytest_cache
+.coverage
+.ruff_cache
+.mypy_cache
+.vscode
