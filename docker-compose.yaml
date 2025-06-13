@@ -1,0 +1,60 @@
+services:
+  auth-api:
+    networks:
+      - backend
+    build: .
+    ports:
+      - 80:80
+    environment:
+      - DB_URL=postgresql+asyncpg://test:test@postgres-db:5432/test
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    
+  postgres-db:
+    image: postgres:15-alpine
+    networks:
+      - backend
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@example.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    ports:
+     - 8090:80
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:80/misc/ping"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  pgadmin-data:
+
+networks:
+  backend:
