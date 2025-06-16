@@ -17,12 +17,14 @@ from application_service.token_service import (
     JWTTokenService,
     TokenService,
 )
+from domain_entity.schemas import UserFromDBDTO
 from infra_repository.crud import UserCRUD
 from infra_repository.db import db_handler
 from settings import Settings
 
 _settings_singleton = None
 _crypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+oauth_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth-token')
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -69,4 +71,9 @@ def get_auth_service(
     )
 
 
-oauth_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth-token')
+async def get_current_user(
+    token: Annotated[str, Depends(oauth_scheme)],
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+) -> UserFromDBDTO:
+
+    return await auth_service.get_current_active_user(token)

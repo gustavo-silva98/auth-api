@@ -29,3 +29,30 @@ class Token(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+class PermissionItemDTO(BaseModel):
+    """
+    Schema
+        permission: str
+        description: str
+    """
+
+    permission: str
+    description: str
+
+
+class CreateRoleDTO(BaseModel):
+    """
+    *Schema*
+        name: str
+        permissions: list[PermissionItemDTO]
+        ~~~
+        *Example:*
+        name : RoleTeste
+        permissions: [{permission:"users:write",description:"Descrição da permissao"}]
+    """
+
+    name: str
+    description: str
+    permissions: list[PermissionItemDTO]

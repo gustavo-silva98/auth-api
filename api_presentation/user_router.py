@@ -2,7 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from api_presentation.dependencies import get_auth_service, oauth_scheme
+from api_presentation.dependencies import (
+    get_auth_service,
+    get_current_user,
+    oauth_scheme,
+)
 from application_service.auth_service import AuthServiceProtocol
 from domain_entity.schemas import (
     UserCreateDTO,
@@ -31,6 +35,7 @@ async def get_me(
 @user_router.get('/get_users')
 async def get_users(
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+    current_user: Annotated[UserFromDBDTO, Depends(get_current_user)],
 ):
 
     return await auth_service.get_users()

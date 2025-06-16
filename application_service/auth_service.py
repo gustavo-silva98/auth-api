@@ -14,8 +14,9 @@ from domain_entity.exceptions import (
     UnauthorizedException,
     UserNotFound,
 )
-from domain_entity.models import User
+from domain_entity.models import Permission, Role, User
 from domain_entity.schemas import (
+    CreateRoleDTO,
     RefreshTokenRequest,
     Token,
     UserCreateDTO,
@@ -49,6 +50,17 @@ class AuthServiceProtocol(Protocol):
 
     async def get_users_me(self, token) -> UserFromDBDTO:
         ...   # pragma: no cover
+
+    async def get_current_active_user(self, token: str) -> UserFromDBDTO:
+        ...
+
+    async def create_roles_with_permissions(
+        self, role_data: CreateRoleDTO
+    ) -> Role:
+        ...
+
+    async def delete_role_by_name(self, role_name: str):
+        ...
 
 
 @runtime_checkable
@@ -223,3 +235,66 @@ class AuthService:
         if get_user is None:
             raise UnauthorizedException()
         return UserFromDBDTO.model_validate(get_user)
+
+    async def get_current_active_user(self, token: str) -> UserFromDBDTO:
+        payload = self.token_service.decode_token(token=token)
+        username = payload.get('sub')
+
+        if not username:
+            raise UnauthorizedException()
+
+        result = await self.user_crud.get_user_by_username(
+            username=username, async_transaction=self.db
+        )
+        if not result:
+            raise UnauthorizedException()
+
+        return UserFromDBDTO(
+            id=result.id,
+            username=result.username,
+            email=result.email,
+            fullname=result.fullname,
+        )
+
+    async def create_roles_with_permissions(
+        self, role_data: CreateRoleDTO
+    ) -> Role:
+        permissions = []
+
+        for permission in role_data.permissions:
+            result = await self.user_crud.get_permission_by_name(
+                permission.permission, self.db
+            )
+            print(result)
+            if not result:
+                perm = Permission(
+                    scope=permission.permission,
+                    description=permission.description,
+                )
+                insert_perm = await self.user_crud.insert_permission(
+                    permission=perm, async_transaction=self.db
+                )
+                permissions.append(insert_perm)
+                print(permissions)
+
+        role = Role(
+            name=role_data.name,
+            description=role_data.description,
+            permissions=permissions,
+        )
+        insert_role = await self.user_crud.insert_role(
+            role=role, async_transaction=self.db
+        )
+        if insert_role:
+            return insert_role
+        else:
+            raise BadRequest('Failed to create role with permissions.')
+
+    async def delete_role_by_name(self, role_name: str):
+        delete = await self.user_crud.delete_role(
+            role_name=role_name, async_transaction=self.db
+        )
+        if delete <= 0:
+            raise BadRequest('Role não encontrada')
+
+        return {'Roles deletadas': delete}
