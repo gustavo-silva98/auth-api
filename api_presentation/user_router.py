@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 
 from api_presentation.dependencies import (
     get_auth_service,
@@ -35,7 +35,9 @@ async def get_me(
 @user_router.get('/get_users')
 async def get_users(
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
-    current_user: Annotated[UserFromDBDTO, Depends(get_current_user)],
+    current_user: Annotated[
+        UserFromDBDTO, Security(get_current_user, scopes='users:view')
+    ],
 ):
 
     return await auth_service.get_users()

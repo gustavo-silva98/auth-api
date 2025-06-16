@@ -32,7 +32,10 @@ class TokenService(Protocol):
     settings: Settings
 
     def create_access_token(
-        self, username: str, expires_delta: timedelta | None
+        self,
+        username: str,
+        permissions: list[str],
+        expires_delta: timedelta | None,
     ) -> str:
         ...  # pragma: no cover
 
@@ -51,7 +54,10 @@ class JWTTokenService(TokenService):
         self.settings = settings
 
     def create_access_token(
-        self, username: str, expires_delta: timedelta | None = None
+        self,
+        username: str,
+        permissions: list[str],
+        expires_delta: timedelta | None = None,
     ):
         to_encode = {'sub': username}
 
@@ -60,6 +66,7 @@ class JWTTokenService(TokenService):
 
         to_encode['exp'] = str(int(expire.timestamp()))
         to_encode['token_type'] = 'access'  # nosec: B105
+        to_encode['perms'] = ','.join(permissions)
 
         encoded_jwt = self.jwt_handler.encode(
             to_encode, self.settings.SECRET_KEY, self.settings.ALGORITHM

@@ -74,6 +74,18 @@ def get_auth_service(
 async def get_current_user(
     token: Annotated[str, Depends(oauth_scheme)],
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
-) -> UserFromDBDTO:
+) -> tuple[UserFromDBDTO, list[str]]:
 
     return await auth_service.get_current_active_user(token)
+
+
+def has_permissions(required_permission: str):
+    async def permission_checker(
+        current_user: Annotated[dict, Depends(get_current_user)]
+    ) -> bool:
+        if required_permission in current_user['perms']:
+            return True
+        else:
+            return False
+
+    return permission_checker

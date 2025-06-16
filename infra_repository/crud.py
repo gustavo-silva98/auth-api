@@ -1,5 +1,6 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 from domain_entity.models import Permission, Role, User
 
@@ -43,11 +44,15 @@ class UserCRUD:
         username: str, async_transaction: AsyncSession
     ) -> User | None:
 
-        query = select(User).where(User.username == username)
+        query = (
+            select(User)
+            .options(joinedload(User.roles).joinedload(Role.permissions))
+            .where(User.username == username)
+        )
 
         result = await async_transaction.execute(query)
 
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
 
     @staticmethod
     async def get_users(async_transaction: AsyncSession):
@@ -91,3 +96,33 @@ class UserCRUD:
         result = await async_transaction.execute(query)
 
         return result.rowcount
+
+    @staticmethod
+    async def get_user_by_id(user_id: int, async_transaction: AsyncSession):
+        query = (
+            select(User)
+            .options(selectinload(User.roles))
+            .where(User.id == user_id)
+        )
+        result = await async_transaction.execute(query)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_role_by_id(role_id: int, async_transaction: AsyncSession):
+        query = select(Role).where(Role.id == role_id)
+        result = await async_transaction.execute(query)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_roles_and_permissions_for_user_id(
+        user_id: int, async_transaction: AsyncSession
+    ):
+        query = (
+            select(User)
+            .options(joinedload(User.roles).joinedload(Role.permissions))
+            .where(User.id == user_id)
+        )
+        result = await async_transaction.execute(query)
+        return result.unique().scalar_one_or_none()

@@ -56,3 +56,26 @@ class CreateRoleDTO(BaseModel):
     name: str
     description: str
     permissions: list[PermissionItemDTO]
+
+
+class PermissionFromDBDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    scope: str
+    description: str
+
+
+class RoleFromDBDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    description: str
+    name: str
+    permissions: list[PermissionFromDBDTO]
+
+
+class UserRolePermissionDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    active: bool
+    roles: list[RoleFromDBDTO]

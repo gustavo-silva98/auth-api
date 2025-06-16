@@ -23,3 +23,24 @@ async def delete_role_by_name(
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
     return await auth_service.delete_role_by_name(role_name)
+
+
+@role_router.post('/roles/{user_id}/update')
+async def assign_role(
+    user_id: int,
+    role_id: int,
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+):
+    return await auth_service.assign_role_to_user(
+        role_id=role_id, user_id=user_id
+    )
+
+
+@role_router.get('/roles/{user_id}/list')
+async def get_roles_list_user_id(
+    user_id: int,
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+):
+    return await auth_service.list_roles_and_permissions_for_user_id(
+        user_id=user_id
+    )
