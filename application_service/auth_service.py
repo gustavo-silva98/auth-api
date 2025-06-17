@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Protocol, runtime_checkable
 
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, SecurityScopes
 from jwt import PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,12 +14,14 @@ from domain_entity.exceptions import (
     UnauthorizedException,
     UserNotFound,
 )
-from domain_entity.models import User
+from domain_entity.models import Permission, Role, User
 from domain_entity.schemas import (
+    CreateRoleDTO,
     RefreshTokenRequest,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
+    UserRolePermissionDTO,
 )
 from infra_repository.crud import UserCRUD
 from settings import Settings
@@ -49,6 +51,27 @@ class AuthServiceProtocol(Protocol):
 
     async def get_users_me(self, token) -> UserFromDBDTO:
         ...   # pragma: no cover
+
+    async def get_current_active_user(
+        self, token: str, required_perms: SecurityScopes
+    ) -> UserFromDBDTO:
+        ...
+
+    async def create_roles_with_permissions(
+        self, role_data: CreateRoleDTO
+    ) -> Role:
+        ...
+
+    async def delete_role_by_name(self, role_name: str) -> dict:
+        ...
+
+    async def assign_role_to_user(self, role_id: int, user_id: int) -> dict:
+        ...
+
+    async def list_roles_and_permissions_for_user_id(
+        self, user_id: int
+    ) -> UserRolePermissionDTO:
+        ...
 
 
 @runtime_checkable
@@ -143,9 +166,15 @@ class AuthService:
         refresh_token_expire = timedelta(
             days=self.settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
+        permissions = []
+        for role in get_user.roles:
+            for permission in role.permissions:
+                permissions.append(permission.scope)
 
         access_token = self.token_service.create_access_token(
-            auth_request.username, expires_delta=acces_token_expire
+            auth_request.username,
+            permissions=permissions,
+            expires_delta=acces_token_expire,
         )
         refresh_token = self.token_service.create_refresh_token(
             auth_request.username, expires_delta=refresh_token_expire
@@ -181,8 +210,15 @@ class AuthService:
                 days=self.settings.REFRESH_TOKEN_EXPIRE_DAYS
             )
 
+            permissions = []
+            for role in get_user.roles:
+                for permission in role.permissions:
+                    permissions.append(permission.scope)
+
             access_token = self.token_service.create_access_token(
-                get_user.username, expires_delta=access_token_expire
+                get_user.username,
+                permissions=permissions,
+                expires_delta=access_token_expire,
             )
             new_refresh_token = self.token_service.create_refresh_token(
                 get_user.username, expires_delta=refresh_token_expire
@@ -223,3 +259,117 @@ class AuthService:
         if get_user is None:
             raise UnauthorizedException()
         return UserFromDBDTO.model_validate(get_user)
+
+    async def get_current_active_user(
+        self, token: str, required_perms: SecurityScopes
+    ) -> UserFromDBDTO:
+
+        authenticate_value = 'Bearer'
+        if required_perms.scopes:
+            authenticate_value = f'Bearer scope={required_perms.scope_str}'
+
+        payload = self.token_service.decode_token(token=token)
+        username = payload.get('sub')
+        user_perms = payload.get('perms')
+
+        if not username or not user_perms:
+            raise UnauthorizedException(bearer=authenticate_value)
+
+        user_perms = user_perms.split(',')
+
+        result = await self.user_crud.get_user_by_username(
+            username=username, async_transaction=self.db
+        )
+        if not result:
+            raise UnauthorizedException(bearer=authenticate_value)
+        if not result.active:
+            raise UnauthorizedException(bearer=authenticate_value)
+
+        for permission in required_perms.scopes:
+            if permission not in user_perms:
+                raise UnauthorizedException(bearer=authenticate_value)
+
+        return UserFromDBDTO(
+            id=result.id,
+            username=result.username,
+            email=result.email,
+            fullname=result.fullname,
+        )
+
+    async def create_roles_with_permissions(
+        self, role_data: CreateRoleDTO
+    ) -> Role:
+        permissions = []
+
+        for permission in role_data.permissions:
+            result = await self.user_crud.get_permission_by_name(
+                permission.permission, self.db
+            )
+            print(result)
+            if not result:
+                perm = Permission(
+                    scope=permission.permission,
+                    description=permission.description,
+                )
+                insert_perm = await self.user_crud.insert_permission(
+                    permission=perm, async_transaction=self.db
+                )
+                permissions.append(insert_perm)
+                print(permissions)
+
+        role = Role(
+            name=role_data.name,
+            description=role_data.description,
+            permissions=permissions,
+        )
+        insert_role = await self.user_crud.insert_role(
+            role=role, async_transaction=self.db
+        )
+        if insert_role:
+            return insert_role
+        else:
+            raise BadRequest('Failed to create role with permissions.')
+
+    async def delete_role_by_name(self, role_name: str):
+        delete = await self.user_crud.delete_role(
+            role_name=role_name, async_transaction=self.db
+        )
+        if delete <= 0:
+            raise BadRequest('Role não encontrada')
+
+        return {'Roles deletadas': delete}
+
+    async def assign_role_to_user(self, role_id: int, user_id: int):
+        user = await self.user_crud.get_user_by_id(
+            user_id=user_id, async_transaction=self.db
+        )
+
+        role = await self.user_crud.get_role_by_id(
+            role_id=role_id, async_transaction=self.db
+        )
+
+        if not user or not role:
+            raise UserNotFound()
+
+        if role not in user.roles:
+            user.roles.append(role)
+            await self.db.commit()
+
+            return {
+                'message': f'Role {role.name} assigned to user {user.username}'
+            }
+        else:
+            raise BadRequest(
+                f'Role {role} already assigned to user {user.username}'
+            )
+
+    async def list_roles_and_permissions_for_user_id(self, user_id: int):
+
+        result = await self.user_crud.get_roles_and_permissions_for_user_id(
+            user_id=user_id, async_transaction=self.db
+        )
+
+        if not result:
+            raise UserNotFound()
+
+        return UserRolePermissionDTO.model_validate(result.roles)

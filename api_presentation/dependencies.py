@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,12 +17,14 @@ from application_service.token_service import (
     JWTTokenService,
     TokenService,
 )
+from domain_entity.schemas import UserFromDBDTO
 from infra_repository.crud import UserCRUD
 from infra_repository.db import db_handler
 from settings import Settings
 
 _settings_singleton = None
 _crypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+oauth_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth-token')
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -69,4 +71,23 @@ def get_auth_service(
     )
 
 
-oauth_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth-token')
+async def get_current_user(
+    security_scopes: SecurityScopes,
+    token: Annotated[str, Depends(oauth_scheme)],
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+) -> UserFromDBDTO:
+
+    return await auth_service.get_current_active_user(token, security_scopes)
+
+
+def has_permissions(required_permission: str):
+    async def permission_checker(
+        current_user: Annotated[dict, Depends(get_current_user)]
+    ) -> bool:
+
+        if required_permission in current_user['perms']:
+            return True
+        else:
+            return False
+
+    return permission_checker

@@ -2,7 +2,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 import jwt
+from jwt import PyJWTError
 
+from domain_entity.exceptions import UnauthorizedException
 from settings import Settings
 
 
@@ -30,7 +32,10 @@ class TokenService(Protocol):
     settings: Settings
 
     def create_access_token(
-        self, username: str, expires_delta: timedelta | None
+        self,
+        username: str,
+        permissions: list[str],
+        expires_delta: timedelta | None,
     ) -> str:
         ...  # pragma: no cover
 
@@ -39,6 +44,9 @@ class TokenService(Protocol):
     ) -> str:
         ...   # pragma: no cover
 
+    def decode_token(self, token: str) -> dict:
+        ...
+
 
 class JWTTokenService(TokenService):
     def __init__(self, jwt_handler: JWTHandler, settings: Settings):
@@ -46,7 +54,10 @@ class JWTTokenService(TokenService):
         self.settings = settings
 
     def create_access_token(
-        self, username: str, expires_delta: timedelta | None = None
+        self,
+        username: str,
+        permissions: list[str],
+        expires_delta: timedelta | None = None,
     ):
         to_encode = {'sub': username}
 
@@ -55,6 +66,7 @@ class JWTTokenService(TokenService):
 
         to_encode['exp'] = str(int(expire.timestamp()))
         to_encode['token_type'] = 'access'  # nosec: B105
+        to_encode['perms'] = ','.join(permissions)
 
         encoded_jwt = self.jwt_handler.encode(
             to_encode, self.settings.SECRET_KEY, self.settings.ALGORITHM
@@ -76,3 +88,11 @@ class JWTTokenService(TokenService):
         return encoded_jwt
 
     # // TODO Necessário fazer função de revogar token.
+
+    def decode_token(self, token: str) -> dict:
+        try:
+            return self.jwt_handler.decode(
+                token, self.settings.SECRET_KEY, self.settings.ALGORITHM
+            )
+        except PyJWTError as err:
+            raise UnauthorizedException() from err
