@@ -258,6 +258,7 @@ async def testa_authenticate_get_token_user_invalid(
     hasher = get_hasher
     user_crud = UserCRUD()
     mock_result = MagicMock()
+    mock_result.unique.return_value = mock_result
     mock_result.scalar_one_or_none.return_value = None
 
     mock_db.execute.return_value = mock_result

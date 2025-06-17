@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,17 +72,19 @@ def get_auth_service(
 
 
 async def get_current_user(
+    security_scopes: SecurityScopes,
     token: Annotated[str, Depends(oauth_scheme)],
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
-) -> tuple[UserFromDBDTO, list[str]]:
+) -> UserFromDBDTO:
 
-    return await auth_service.get_current_active_user(token)
+    return await auth_service.get_current_active_user(token, security_scopes)
 
 
 def has_permissions(required_permission: str):
     async def permission_checker(
         current_user: Annotated[dict, Depends(get_current_user)]
     ) -> bool:
+
         if required_permission in current_user['perms']:
             return True
         else:

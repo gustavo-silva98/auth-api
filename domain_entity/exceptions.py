@@ -26,12 +26,16 @@ class PasswordNotMatch(AppException):
 
 
 class UnauthorizedException(AppException):
-    def __init__(self, message: str = 'Could not validate credentials'):
+    def __init__(
+        self,
+        message: str = 'Could not validate credentials',
+        bearer: str = 'Bearer',
+    ):
         super().__init__(
             message,
             code='AUTH_INVALID_CREDENTIALS',
             status_code=401,
-            headers={'WWW-Authenticate': 'Bearer'},
+            headers={'WWW-Authenticate': f'{bearer}'},
         )
 
 

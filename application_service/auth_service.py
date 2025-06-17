@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Protocol, runtime_checkable
 
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, SecurityScopes
 from jwt import PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,8 +53,8 @@ class AuthServiceProtocol(Protocol):
         ...   # pragma: no cover
 
     async def get_current_active_user(
-        self, token: str
-    ) -> tuple[UserFromDBDTO, list[str]]:
+        self, token: str, required_perms: SecurityScopes
+    ) -> UserFromDBDTO:
         ...
 
     async def create_roles_with_permissions(
@@ -261,34 +261,39 @@ class AuthService:
         return UserFromDBDTO.model_validate(get_user)
 
     async def get_current_active_user(
-        self, token: str
-    ) -> tuple[UserFromDBDTO, list[str]]:
+        self, token: str, required_perms: SecurityScopes
+    ) -> UserFromDBDTO:
+
+        authenticate_value = 'Bearer'
+        if required_perms.scopes:
+            authenticate_value = f'Bearer scope={required_perms.scope_str}'
 
         payload = self.token_service.decode_token(token=token)
         username = payload.get('sub')
+        user_perms = payload.get('perms')
 
-        if not username:
-            raise UnauthorizedException()
+        if not username or not user_perms:
+            raise UnauthorizedException(bearer=authenticate_value)
+
+        user_perms = user_perms.split(',')
 
         result = await self.user_crud.get_user_by_username(
             username=username, async_transaction=self.db
         )
         if not result:
-            raise UnauthorizedException()
+            raise UnauthorizedException(bearer=authenticate_value)
+        if not result.active:
+            raise UnauthorizedException(bearer=authenticate_value)
 
-        permissions = []
-        for role in result.roles:
-            for permission in role.permissions:
-                permissions.append(permission.scope)
+        for permission in required_perms.scopes:
+            if permission not in user_perms:
+                raise UnauthorizedException(bearer=authenticate_value)
 
-        return (
-            UserFromDBDTO(
-                id=result.id,
-                username=result.username,
-                email=result.email,
-                fullname=result.fullname,
-            ),
-            permissions,
+        return UserFromDBDTO(
+            id=result.id,
+            username=result.username,
+            email=result.email,
+            fullname=result.fullname,
         )
 
     async def create_roles_with_permissions(

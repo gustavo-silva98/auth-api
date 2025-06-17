@@ -36,7 +36,7 @@ async def get_me(
 async def get_users(
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
     current_user: Annotated[
-        UserFromDBDTO, Security(get_current_user, scopes='users:view')
+        UserFromDBDTO, Security(get_current_user, scopes=['users:view'])
     ],
 ):
 
