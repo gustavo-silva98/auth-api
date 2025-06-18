@@ -342,8 +342,13 @@ async def testa_refresh_access_token_user_not_found(
     jwt_hand = token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
     auth_service.user_crud = AsyncMock(spec=UserCRUD)
 
-    jwt_hand.decode.return_value = {'sub': 'username', 'token_type': 'refresh'}
-    auth_service.user_crud.get_user_by_username.return_value = None
+    jwt_hand.decode.return_value = {
+        'sub': 'username',
+        'token_type': 'refresh',
+        'jti': '123',
+    }
+    auth_service.user_crud.get_user_by_username = AsyncMock(return_value=None)
+    auth_service.user_crud.is_token_revoked = AsyncMock(return_value=False)
 
     with pytest.raises(UserNotFound):
         await auth_service.refresh_access_token('refresh_teste')

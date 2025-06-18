@@ -27,7 +27,6 @@ async def refresh_access_token(
     refresh_token: Annotated[RefreshTokenRequest, Body(...)],
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
-    print(refresh_token.refresh_token)
 
     return await auth_service.refresh_access_token(refresh_token.refresh_token)
 

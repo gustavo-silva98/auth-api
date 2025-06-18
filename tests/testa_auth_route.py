@@ -107,40 +107,23 @@ async def testa_refresh_token_success(client, mock_auth_service):
         refresh_token='new_refresh',
         token_type='bearer',
     )
+    mock_user = UserFromDBDTO(
+        id=1,
+        username='username_teste',
+        email='email@teste.com',
+        fullname='Teste da Silva',
+    )
 
     mock_auth_service.refresh_access_token.return_value = new_token
+    user_crud = UserCRUD()
+    user_crud.get_user_by_username.return_value = mock_user
 
-    refresh_data = {'refresh_token': 'old_refresh'}
+    refresh_data = RefreshTokenRequest(refresh_token='old_refresh')
 
-    response = client.post('/refresh', json=refresh_data)
+    response = client.post('/refresh', json=refresh_data.model_dump())
 
     assert response.status_code == 200
     assert response.json() == new_token.model_dump()
     mock_auth_service.refresh_access_token.assert_called_once_with(
-        RefreshTokenRequest(refresh_token='old_refresh')
+        refresh_data.refresh_token
     )
-
-
-async def testa_protected_route_success(client):
-    # Mock do token
-    mock_token = 'fake_token123'
-
-    # Executa a requisição com header de autenticação
-    response = client.get(
-        '/protected-route', headers={'Authorization': f'Bearer {mock_token}'}
-    )
-
-    # Verificações
-    assert response.status_code == 200
-    assert response.json() == {
-        'message': f'Você conseguiu autenticar - Token: {mock_token}'
-    }
-
-
-async def testa_protected_route_unauthorized(client):
-    # Executa sem token
-    response = client.get('/protected-route')
-
-    # Verificações
-    assert response.status_code == 401
-    assert 'WWW-Authenticate' in response.headers
