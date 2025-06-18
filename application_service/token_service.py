@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
+from uuid import uuid4
 
 import jwt
 from jwt import PyJWTError
@@ -12,8 +13,15 @@ class JWTHandler(Protocol):
     def encode(self, payload: dict, key: str, algorithm: str) -> str:
         ...   # pragma: no cover
 
-    def decode(self, jwt_token: str, key: str, algorithm: str) -> dict:
-        ...   # pragma: no cover
+    def decode(
+        self,
+        jwt_token: str,
+        key: str,
+        algorithm: str,
+        options: dict[str, Any] | None = None,
+    ) -> dict:
+
+        ...   # pragma: no cover1
 
 
 class JWTLibHandler(JWTHandler):
@@ -21,8 +29,18 @@ class JWTLibHandler(JWTHandler):
         encode = jwt.encode(payload, key, algorithm)
         return encode
 
-    def decode(self, jwt_token: str, key: str, algorithm: str) -> dict:
-        decode = jwt.decode(jwt=jwt_token, key=key, algorithms=algorithm)
+    def decode(
+        self,
+        jwt_token: str,
+        key: str,
+        algorithm: str,
+        options: dict[str, Any] | None = None,
+    ) -> dict:
+
+        decode = jwt.decode(
+            jwt=jwt_token, key=key, algorithms=algorithm, options=options
+        )
+
         return decode
 
 
@@ -45,7 +63,7 @@ class TokenService(Protocol):
         ...   # pragma: no cover
 
     def decode_token(self, token: str) -> dict:
-        ...
+        ...   # pragma: no cover
 
 
 class JWTTokenService(TokenService):
@@ -77,17 +95,18 @@ class JWTTokenService(TokenService):
     def create_refresh_token(
         self, username: str, expires_delta: timedelta | None = None
     ):
+
         if expires_delta:
             expire = datetime.now(UTC) + expires_delta
 
         to_encode = {'sub': username, 'exp': expire, 'token_type': 'refresh'}
+        to_encode['jti'] = str(uuid4())
+
         encoded_jwt = self.jwt_handler.encode(
             to_encode, self.settings.SECRET_KEY, self.settings.ALGORITHM
         )
 
         return encoded_jwt
-
-    # // TODO Necessário fazer função de revogar token.
 
     def decode_token(self, token: str) -> dict:
         try:

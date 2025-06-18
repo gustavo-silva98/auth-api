@@ -2,7 +2,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from domain_entity.models import Permission, Role, User
+from domain_entity.models import Permission, RevokedRefreshToken, Role, User
 
 
 class UserCRUD:
@@ -126,3 +126,25 @@ class UserCRUD:
         )
         result = await async_transaction.execute(query)
         return result.unique().scalar_one_or_none()
+
+    @staticmethod
+    async def revoke_token(
+        token_to_revoke: RevokedRefreshToken, async_transaction: AsyncSession
+    ) -> RevokedRefreshToken:
+
+        async_transaction.add(token_to_revoke)
+        await async_transaction.flush()
+        await async_transaction.refresh(token_to_revoke)
+
+        return token_to_revoke
+
+    @staticmethod
+    async def is_token_revoked(
+        token_id: int, async_transaction: AsyncSession
+    ) -> bool:
+        result = await async_transaction.execute(
+            select(RevokedRefreshToken).where(
+                RevokedRefreshToken.id == token_id
+            )
+        )
+        return result.scalars().first() is not None

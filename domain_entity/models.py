@@ -1,6 +1,9 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -99,4 +102,32 @@ class Permission(Base):
     # relação
     roles: Mapped[list['Role']] = relationship(
         secondary=role_permission, back_populates='permissions'
+    )
+
+
+class RevokedRefreshToken(Base):
+    """
+    Represents a revoked refresh token entry in the authentication system.
+
+    Attributes:
+        id (int): Primary key identifier for the revoked token record.
+        token_id (int): Identifier of the refresh token that has been revoked.
+        user_id (int): Identifier of the user associated with the revoked token.
+        expires_at (datetime): The original expiration datetime of the refresh token.
+        revoked_at (datetime): The datetime when the token was revoked.
+            Defaults to the current time.
+    """
+
+    __tablename__ = 'revoked_refresh_tokens'
+
+    """"""
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_id: Mapped[int] = mapped_column(nullable=False)
+    user_id: Mapped[int] = mapped_column(nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
     )

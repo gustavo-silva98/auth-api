@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 from fastapi.security import OAuth2PasswordRequestForm, SecurityScopes
@@ -14,10 +14,9 @@ from domain_entity.exceptions import (
     UnauthorizedException,
     UserNotFound,
 )
-from domain_entity.models import Permission, Role, User
+from domain_entity.models import Permission, RevokedRefreshToken, Role, User
 from domain_entity.schemas import (
     CreateRoleDTO,
-    RefreshTokenRequest,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -41,9 +40,7 @@ class AuthServiceProtocol(Protocol):
     ) -> Token:
         ...   # pragma: no cover
 
-    async def refresh_access_token(
-        self, refresh_token: RefreshTokenRequest
-    ) -> Token:
+    async def refresh_access_token(self, refresh_token: str) -> Token:
         ...   # pragma: no cover
 
     async def get_users(self) -> list:
@@ -72,6 +69,9 @@ class AuthServiceProtocol(Protocol):
         self, user_id: int
     ) -> UserRolePermissionDTO:
         ...
+
+    async def revoke_token(self, token: str, user_id: int) -> dict:
+        ...   # pragma: no cover
 
 
 @runtime_checkable
@@ -186,15 +186,23 @@ class AuthService:
             token_type='bearer',
         )   # nosec: B106
 
-    async def refresh_access_token(self, refresh_token: RefreshTokenRequest):
+    async def refresh_access_token(self, refresh_token: str):
         try:
             payload = self.token_service.jwt_handler.decode(
                 jwt_token=str(refresh_token),
                 key=self.settings.SECRET_KEY,
                 algorithm=self.settings.ALGORITHM,
             )
+
             if payload.get('token_type') != 'refresh':
                 raise BadRequest('Token_type Inválido')
+
+            is_revoked = await self.user_crud.is_token_revoked(
+                token_id=payload['jti'], async_transaction=self.db
+            )
+
+            if is_revoked:
+                raise UnauthorizedException(message='Token Revoked')
 
             username = payload.get('sub')
             get_user = await self.user_crud.get_user_by_username(
@@ -202,7 +210,12 @@ class AuthService:
             )
             if get_user is None:
                 raise UserNotFound()
-            # Se usuário foi encontrado, cria novo access token e refresh_token
+
+            # Se usuário foi encontrado, revoga o atual refresh_token,
+            # cria novo access token e refresh_token
+
+            await self.revoke_token(token=refresh_token, user_id=get_user.id)
+
             access_token_expire = timedelta(
                 minutes=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES
             )
@@ -223,7 +236,7 @@ class AuthService:
             new_refresh_token = self.token_service.create_refresh_token(
                 get_user.username, expires_delta=refresh_token_expire
             )
-            # // NECESSÁRIO FLUXO DE REVOGAR ANTIGO REFRESH TOKEN TODO
+
             return Token(
                 access_token=access_token,
                 refresh_token=new_refresh_token,
@@ -373,3 +386,31 @@ class AuthService:
             raise UserNotFound()
 
         return UserRolePermissionDTO.model_validate(result.roles)
+
+    async def revoke_token(self, token: str, user_id: int):
+        try:
+            payload = self.token_service.jwt_handler.decode(
+                token,
+                self.settings.SECRET_KEY,
+                self.settings.ALGORITHM,
+                options={'verify_exp': False},
+            )
+
+            if payload['token_type'] != 'refresh':
+                raise BadRequest('Invalid Token Type')
+
+            expires_at = datetime.fromtimestamp(payload['exp'])
+            token_id = payload['jti']
+
+            token_to_revoke = RevokedRefreshToken(
+                token_id=token_id, user_id=user_id, expires_at=expires_at
+            )
+
+            await self.user_crud.revoke_token(
+                token_to_revoke=token_to_revoke, async_transaction=self.db
+            )
+
+            return {'detail': 'Logout realizado com sucesso'}
+
+        except PyJWTError as err:
+            raise BadRequest() from err

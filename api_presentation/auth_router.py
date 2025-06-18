@@ -1,29 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api_presentation.dependencies import (
     get_auth_service,
-    oauth_scheme,
+    get_current_user,
 )
 from application_service.auth_service import AuthServiceProtocol
-from domain_entity.schemas import (
-    RefreshTokenRequest,
-    Token,
-    UserCreateDTO,
-    UserFromDBDTO,
-)
+from domain_entity.schemas import RefreshTokenRequest, Token, UserFromDBDTO
 
 auth_router = APIRouter()
-
-
-@auth_router.post('/create-user', response_model=UserFromDBDTO)
-async def auth_route_create_user(
-    user_data: UserCreateDTO,
-    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
-):
-    return await auth_service.create_user_from_route(user_data)
 
 
 @auth_router.post('/auth-token', response_model=Token)
@@ -37,13 +24,20 @@ async def auth_get_token(
 
 @auth_router.post('/refresh')
 async def refresh_access_token(
-    refresh_token: RefreshTokenRequest,
+    refresh_token: Annotated[RefreshTokenRequest, Body(...)],
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
 
-    return await auth_service.refresh_access_token(refresh_token)
+    return await auth_service.refresh_access_token(refresh_token.refresh_token)
 
 
-@auth_router.get('/protected-route')
-async def protected_route(token: Annotated[str, Depends(oauth_scheme)]):
-    return {'message': f'Você conseguiu autenticar - Token: {token}'}
+@auth_router.post('/logout')
+async def logout(
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+    current_user: Annotated[UserFromDBDTO, Depends(get_current_user)],
+    token: Annotated[RefreshTokenRequest, Body(...)],
+):
+    print(token)
+    return await auth_service.revoke_token(
+        token=token.refresh_token, user_id=current_user.id
+    )
