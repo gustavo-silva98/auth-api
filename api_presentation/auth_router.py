@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends
@@ -11,6 +12,7 @@ from application_service.auth_service import AuthServiceProtocol
 from domain_entity.schemas import RefreshTokenRequest, Token, UserFromDBDTO
 
 auth_router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @auth_router.post('/auth-token', response_model=Token)
@@ -18,6 +20,10 @@ async def auth_get_token(
     user_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
+    logging.info(
+        'Tentativa de login',
+        extra={'username': user_data.username, 'event': 'login_attempt'},
+    )
 
     return await auth_service.authenticate_get_token(user_data)
 

@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s  # Coleta a cada 15s
+
+scrape_configs:
+  - job_name: 'fastapi-app'
+    static_configs:
+      - targets: ['app:8000']  # Monitora sua aplicação
+        labels:
+          env: 'development'

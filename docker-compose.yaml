@@ -4,12 +4,17 @@ services:
       - backend
     build: .
     ports:
-      - 80:80
+      - 8000:8000
     environment:
       - DB_URL=postgresql+asyncpg://test:test@postgres-db:5432/test
+      - LOG_LEVEL=${LOG_LEVEL:-INFO} 
     depends_on:
+      loki:
+        condition: service_started
       postgres-db:
         condition: service_healthy
+    labels:
+      - "logging=promtail"  # Identificador para o Promtail
     
   postgres-db:
     image: postgres:15-alpine
@@ -52,7 +57,52 @@ services:
       postgres-db:
         condition: service_healthy
 
+    # Coletor de logs (lê logs dos containers)
+  promtail:
+    image: grafana/promtail:2.9.4
+    volumes:
+      - ./config_viz/promtail:/etc/promtail
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+
+    # Armazenamento de logs
+  loki:
+    image: grafana/loki:2.9.4
+    volumes:
+      - ./config_viz/loki:/etc/loki
+      - loki-data:/loki  # Volume para persistência
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  # Coletor de métricas
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./config_viz/prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+
+  # Visualização
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}  # Seguro com .env
+    volumes:
+      - grafana-data:/var/lib/grafana  # Persistência de dashboards
+
 volumes:
+  loki-data:    # Logs são efêmeros, mas volume permite persistência entre reinícios
+  grafana-data: # Salva dashboards e configurações
   postgres_data:
   pgadmin-data:
 
