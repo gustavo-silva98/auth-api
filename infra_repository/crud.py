@@ -89,10 +89,19 @@ class UserCRUD:
         return role
 
     @staticmethod
-    async def delete_role(
+    async def delete_role_by_name(
         role_name: str, async_transaction: AsyncSession
     ) -> int:
         query = delete(Role).where(Role.name == role_name)
+        result = await async_transaction.execute(query)
+
+        return result.rowcount
+
+    @staticmethod
+    async def delete_role_by_id(
+        role_id: int, async_transaction: AsyncSession
+    ) -> int:
+        query = delete(Role).where(Role.id == role_id)
         result = await async_transaction.execute(query)
 
         return result.rowcount
@@ -111,6 +120,15 @@ class UserCRUD:
     @staticmethod
     async def get_role_by_id(role_id: int, async_transaction: AsyncSession):
         query = select(Role).where(Role.id == role_id)
+        result = await async_transaction.execute(query)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_role_by_name(
+        role_name: str, async_transaction: AsyncSession
+    ) -> Role | None:
+        query = select(Role).where(Role.name == role_name)
         result = await async_transaction.execute(query)
 
         return result.scalar_one_or_none()

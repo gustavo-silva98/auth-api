@@ -14,8 +14,14 @@ from domain_entity.exceptions import (
     UnauthorizedException,
     UserNotFound,
 )
-from domain_entity.models import User
-from domain_entity.schemas import Token, UserCreateDTO, UserFromDBDTO
+from domain_entity.models import Role, User
+from domain_entity.schemas import (
+    CreateRoleDTO,
+    PermissionItemDTO,
+    Token,
+    UserCreateDTO,
+    UserFromDBDTO,
+)
 from infra_repository.crud import UserCRUD
 from settings import Settings
 
@@ -352,3 +358,84 @@ async def testa_refresh_access_token_user_not_found(
 
     with pytest.raises(UserNotFound):
         await auth_service.refresh_access_token('refresh_teste')
+
+
+async def testa_delete_role_by_id_valid(get_auth_service):
+    auth_service = get_auth_service
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    auth_service.user_crud.delete_role_by_id = AsyncMock(return_value=1)
+
+    assert await auth_service.delete_role_by_id(1) == {'Roles deletadas': 1}
+
+
+async def testa_delete_role_by_id_invalid(get_auth_service):
+    auth_service = get_auth_service
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    auth_service.user_crud.delete_role_by_id = AsyncMock(return_value=0)
+
+    with pytest.raises(BadRequest):
+        await auth_service.delete_role_by_id(1)
+
+
+async def testa_delete_role_by_name_valid(get_auth_service):
+    auth_service = get_auth_service
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    auth_service.user_crud.delete_role_by_name = AsyncMock(return_value=1)
+
+    assert await auth_service.delete_role_by_name(1) == {'Roles deletadas': 1}
+
+
+async def testa_delete_role_by_name_invalid(get_auth_service):
+    auth_service = get_auth_service
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    auth_service.user_crud.delete_role_by_name = AsyncMock(return_value=0)
+
+    with pytest.raises(BadRequest):
+        await auth_service.delete_role_by_name(1)
+
+
+async def testa_create_roles_with_permissions_valid(get_auth_service):
+    auth_service = get_auth_service
+
+    create_role = CreateRoleDTO(
+        name='string',
+        description='string',
+        permissions=[
+            PermissionItemDTO(permission='string', description='string')
+        ],
+    )
+    return_role = Role(id=1, name='string', description='string')
+
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+    auth_service.user_crud.get_role_by_name = AsyncMock(return_value=None)
+    auth_service.user_crud.insert_role = AsyncMock(return_value=return_role)
+
+    assert (
+        await auth_service.create_roles_with_permissions(create_role)
+        == return_role
+    )
+
+
+async def testa_create_roles_with_permissions_invalid(get_auth_service):
+    auth_service = get_auth_service
+
+    create_role = CreateRoleDTO(
+        name='string',
+        description='string',
+        permissions=[
+            PermissionItemDTO(permission='string', description='string')
+        ],
+    )
+    return_role = Role(id=1, name='string', description='string')
+
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+    auth_service.user_crud.get_role_by_name = AsyncMock(
+        return_value=return_role
+    )
+
+    with pytest.raises(BadRequest):
+        await auth_service.create_roles_with_permissions(create_role)
