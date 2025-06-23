@@ -52,23 +52,26 @@ class AuthServiceProtocol(Protocol):
     async def get_current_active_user(
         self, token: str, required_perms: SecurityScopes
     ) -> UserFromDBDTO:
-        ...
+        ...   # pragma: no cover
 
     async def create_roles_with_permissions(
         self, role_data: CreateRoleDTO
     ) -> Role:
-        ...
+        ...   # pragma: no cover
 
     async def delete_role_by_name(self, role_name: str) -> dict:
-        ...
+        ...   # pragma: no cover
+
+    async def delete_role_by_id(self, role_id: int) -> dict:
+        ...   # pragma: no cover
 
     async def assign_role_to_user(self, role_id: int, user_id: int) -> dict:
-        ...
+        ...   # pragma: no cover
 
     async def list_roles_and_permissions_for_user_id(
         self, user_id: int
     ) -> UserRolePermissionDTO:
-        ...
+        ...   # pragma: no cover
 
     async def revoke_token(self, token: str, user_id: int) -> dict:
         ...   # pragma: no cover
@@ -312,13 +315,19 @@ class AuthService:
     async def create_roles_with_permissions(
         self, role_data: CreateRoleDTO
     ) -> Role:
+        get_role = await self.user_crud.get_role_by_name(
+            role_name=role_data.name, async_transaction=self.db
+        )
+
+        if get_role:
+            raise BadRequest('Role já criada no ambiente')
+
         permissions = []
 
         for permission in role_data.permissions:
             result = await self.user_crud.get_permission_by_name(
                 permission.permission, self.db
             )
-            print(result)
             if not result:
                 perm = Permission(
                     scope=permission.permission,
@@ -328,7 +337,6 @@ class AuthService:
                     permission=perm, async_transaction=self.db
                 )
                 permissions.append(insert_perm)
-                print(permissions)
 
         role = Role(
             name=role_data.name,
@@ -341,11 +349,20 @@ class AuthService:
         if insert_role:
             return insert_role
         else:
-            raise BadRequest('Failed to create role with permissions.')
+            raise BadRequest('Falha ao criar Role')
 
     async def delete_role_by_name(self, role_name: str):
-        delete = await self.user_crud.delete_role(
+        delete = await self.user_crud.delete_role_by_name(
             role_name=role_name, async_transaction=self.db
+        )
+        if delete <= 0:
+            raise BadRequest('Role não encontrada')
+
+        return {'Roles deletadas': delete}
+
+    async def delete_role_by_id(self, role_id: int):
+        delete = await self.user_crud.delete_role_by_id(
+            role_id=role_id, async_transaction=self.db
         )
         if delete <= 0:
             raise BadRequest('Role não encontrada')
@@ -384,6 +401,8 @@ class AuthService:
 
         if not result:
             raise UserNotFound()
+
+        print(result)
 
         return UserRolePermissionDTO.model_validate(result.roles)
 
