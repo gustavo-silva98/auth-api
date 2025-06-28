@@ -37,7 +37,6 @@ async def logout(
     current_user: Annotated[UserFromDBDTO, Depends(get_current_user)],
     token: Annotated[RefreshTokenRequest, Body(...)],
 ):
-    print(token)
     return await auth_service.revoke_token(
         token=token.refresh_token, user_id=current_user.id
     )

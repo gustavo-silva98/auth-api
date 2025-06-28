@@ -79,3 +79,11 @@ async def get_roles_list_user_id(
 
 
 # //TODO Fazer endpoint GET ROLE BY ID
+
+
+@role_router.get('/{role_id}')
+async def get_role_by_id(
+    role_id: int,
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
+):
+    return await auth_service.return_role_by_id(role_id)

@@ -17,6 +17,7 @@ from domain_entity.exceptions import (
 from domain_entity.models import Permission, RevokedRefreshToken, Role, User
 from domain_entity.schemas import (
     CreateRoleDTO,
+    RoleFromDBDTO,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -74,6 +75,9 @@ class AuthServiceProtocol(Protocol):
         ...   # pragma: no cover
 
     async def revoke_token(self, token: str, user_id: int) -> dict:
+        ...   # pragma: no cover
+
+    async def return_role_by_id(self, role_id: int):
         ...   # pragma: no cover
 
 
@@ -402,8 +406,6 @@ class AuthService:
         if not result:
             raise UserNotFound()
 
-        print(result)
-
         return UserRolePermissionDTO.model_validate(result.roles)
 
     async def revoke_token(self, token: str, user_id: int):
@@ -433,3 +435,13 @@ class AuthService:
 
         except PyJWTError as err:
             raise BadRequest() from err
+
+    async def return_role_by_id(self, role_id: int):
+        get_role = await self.user_crud.get_role_by_id(
+            role_id=role_id, async_transaction=self.db
+        )
+
+        if get_role is not None:
+            return RoleFromDBDTO.model_validate(get_role)
+        else:
+            raise BadRequest('Role não encontrada')

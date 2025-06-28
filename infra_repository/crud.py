@@ -118,13 +118,6 @@ class UserCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_role_by_id(role_id: int, async_transaction: AsyncSession):
-        query = select(Role).where(Role.id == role_id)
-        result = await async_transaction.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
     async def get_role_by_name(
         role_name: str, async_transaction: AsyncSession
     ) -> Role | None:
@@ -166,3 +159,13 @@ class UserCRUD:
             )
         )
         return result.scalars().first() is not None
+
+    @staticmethod
+    async def get_role_by_id(role_id: int, async_transaction: AsyncSession):
+        query = (
+            select(Role)
+            .options(joinedload(Role.permissions))
+            .where(Role.id == role_id)
+        )
+        result = await async_transaction.execute(query)
+        return result.unique().scalar_one_or_none()
