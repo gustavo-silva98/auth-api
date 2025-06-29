@@ -169,3 +169,10 @@ class UserCRUD:
         )
         result = await async_transaction.execute(query)
         return result.unique().scalar_one_or_none()
+
+    @staticmethod
+    async def get_roles(async_transaction : AsyncSession):
+        query = select(Role)
+
+        result = await async_transaction.execute(query)
+        return result.scalars()

@@ -79,6 +79,9 @@ class AuthServiceProtocol(Protocol):
 
     async def return_role_by_id(self, role_id: int):
         ...   # pragma: no cover
+    
+    async def get_roles(self,):
+        ...   # pragma: no cover
 
 
 @runtime_checkable
@@ -445,3 +448,14 @@ class AuthService:
             return RoleFromDBDTO.model_validate(get_role)
         else:
             raise BadRequest('Role não encontrada')
+
+    async def get_roles(self):
+        get_roles = await self.user_crud.get_roles(
+            async_transaction=self.db
+        )
+        if not get_roles:
+            return []
+        if isinstance(get_roles,Role):
+            get_roles = [get_roles]
+        return [RoleFromDBDTO.model_validate(i) for i in get_roles]
+

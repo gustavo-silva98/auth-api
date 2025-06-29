@@ -82,4 +82,32 @@ async def get_role_by_id(
     role_id: int,
     auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)],
 ):
+    """
+    Obtém uma função (role) pelo seu ID.
+
+    Args:
+        role_id (int): O ID da função (role) a ser recuperada.
+        auth_service (Annotated[AuthServiceProtocol, Depends]):
+            Serviço de autenticação responsável pelas operações relacionadas
+            a funções.
+
+    Returns:
+        Role: Objeto da função correspondente ao ID fornecido.
+
+    Raises:
+        HTTPException: Se a função não for encontrada ou ocorrer um erro durante a busca
+    """
     return await auth_service.return_role_by_id(role_id)
+
+@role_router.get('/')
+async def get_roles(
+    auth_service: Annotated[AuthServiceProtocol, Depends(get_auth_service)]
+):
+    return await auth_service.get_roles()
+
+# TODO Endpoint para listar todas as roles
+# TODO Endpoint para associar role a permissão
+
+#// TODO Endpoint para criar permission
+#// TODO Endpoint para deletar permission
+# TODO Endpoint para listar todas as permissions

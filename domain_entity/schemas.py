@@ -65,13 +65,18 @@ class PermissionFromDBDTO(BaseModel):
     description: str
 
 
-class RoleFromDBDTO(BaseModel):
+class RolePermsFromDBDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     description: str
     name: str
     permissions: list[PermissionFromDBDTO]
 
+class RoleFromDBDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    description: str
+    name: str
 
 class UserRolePermissionDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
