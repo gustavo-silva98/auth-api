@@ -17,7 +17,10 @@ from domain_entity.exceptions import (
 from domain_entity.models import Permission, RevokedRefreshToken, Role, User
 from domain_entity.schemas import (
     CreateRoleDTO,
+    PermissionFromDBDTO,
+    PermissionItemDTO,
     RoleFromDBDTO,
+    RolePermsFromDBDTO,
     Token,
     UserCreateDTO,
     UserFromDBDTO,
@@ -60,6 +63,11 @@ class AuthServiceProtocol(Protocol):
     ) -> Role:
         ...   # pragma: no cover
 
+    async def create_perms_with_permissions(
+        self, permission_data: PermissionItemDTO
+    ) -> Permission:
+        ...   # pragma: no cover
+
     async def delete_role_by_name(self, role_name: str) -> dict:
         ...   # pragma: no cover
 
@@ -67,6 +75,11 @@ class AuthServiceProtocol(Protocol):
         ...   # pragma: no cover
 
     async def assign_role_to_user(self, role_id: int, user_id: int) -> dict:
+        ...   # pragma: no cover
+
+    async def assign_permission_to_role(
+        self, role_id: int, perm_id: int
+    ) -> dict:
         ...   # pragma: no cover
 
     async def list_roles_and_permissions_for_user_id(
@@ -79,8 +92,16 @@ class AuthServiceProtocol(Protocol):
 
     async def return_role_by_id(self, role_id: int):
         ...   # pragma: no cover
-    
-    async def get_roles(self,):
+
+    async def get_roles(
+        self,
+    ):
+        ...   # pragma: no cover
+
+    async def get_permissions(self):
+        ...   # pragma: no cover
+
+    async def delete_permission_by_id(self, permission_id):
         ...   # pragma: no cover
 
 
@@ -358,6 +379,29 @@ class AuthService:
         else:
             raise BadRequest('Falha ao criar Role')
 
+    async def create_perms_with_permissions(
+        self, permission_data: PermissionItemDTO
+    ) -> Permission:
+
+        get_permission = await self.user_crud.get_permission_by_name(
+            permission=permission_data.permission, async_transaction=self.db
+        )
+        if get_permission:
+            raise BadRequest('Permissão já criada no ambiente')
+
+        permission = Permission(
+            scope=permission_data.permission,
+            description=permission_data.description,
+        )
+
+        insert_permission = await self.user_crud.insert_permission(
+            permission=permission, async_transaction=self.db
+        )
+        if insert_permission:
+            return insert_permission
+        else:
+            raise BadRequest('Falha ao criar permission.')
+
     async def delete_role_by_name(self, role_name: str):
         delete = await self.user_crud.delete_role_by_name(
             role_name=role_name, async_transaction=self.db
@@ -445,17 +489,59 @@ class AuthService:
         )
 
         if get_role is not None:
-            return RoleFromDBDTO.model_validate(get_role)
+            return RolePermsFromDBDTO.model_validate(get_role)
         else:
             raise BadRequest('Role não encontrada')
 
     async def get_roles(self):
-        get_roles = await self.user_crud.get_roles(
-            async_transaction=self.db
-        )
+        get_roles = await self.user_crud.get_roles(async_transaction=self.db)
         if not get_roles:
             return []
-        if isinstance(get_roles,Role):
+        if isinstance(get_roles, Role):
             get_roles = [get_roles]
         return [RoleFromDBDTO.model_validate(i) for i in get_roles]
 
+    async def get_permissions(self):
+        get_permissions = await self.user_crud.get_permissions(self.db)
+        if not get_permissions:
+            return []
+
+        if isinstance(get_permissions, Permission):
+            get_permissions = [get_permissions]
+
+        return [PermissionFromDBDTO.model_validate(i) for i in get_permissions]
+
+    async def delete_permission_by_id(self, permission_id):
+        delete = await self.user_crud.delete_perm_by_id(
+            perm_id=permission_id, async_transaction=self.db
+        )
+        if delete <= 0:
+            raise BadRequest('Permissão não encontrada')
+
+        return {'Permissões deletadas ': delete}
+
+    async def assign_permission_to_role(
+        self, role_id: int, perm_id: int
+    ) -> dict:
+        role = await self.user_crud.get_role_by_id(
+            role_id=role_id, async_transaction=self.db
+        )
+
+        perm = await self.user_crud.get_permission_by_id(
+            permission_id=perm_id, async_transaction=self.db
+        )
+
+        if not role or not perm:
+            raise BadRequest('Role não encontrada')
+
+        if role not in role.permissions:
+            role.permissions.append(perm)
+            await self.db.commit()
+
+            return {
+                'message': f'Permissão {perm.scope} atrelada a Role {role.name}'
+            }
+        else:
+            raise BadRequest(
+                f'Permissão {perm.scope} já atrelada a Role {role.name} '
+            )

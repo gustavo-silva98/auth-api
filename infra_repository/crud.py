@@ -71,6 +71,14 @@ class UserCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_permission_by_id(
+        permission_id: int, async_transaction: AsyncSession
+    ):
+        query = select(Permission).where(Permission.id == permission_id)
+        result = await async_transaction.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def insert_permission(
         permission: Permission, async_transaction: AsyncSession
     ) -> Permission:
@@ -102,6 +110,15 @@ class UserCRUD:
         role_id: int, async_transaction: AsyncSession
     ) -> int:
         query = delete(Role).where(Role.id == role_id)
+        result = await async_transaction.execute(query)
+
+        return result.rowcount
+
+    @staticmethod
+    async def delete_perm_by_id(
+        perm_id: int, async_transaction: AsyncSession
+    ) -> int:
+        query = delete(Permission).where(Permission.id == perm_id)
         result = await async_transaction.execute(query)
 
         return result.rowcount
@@ -171,8 +188,15 @@ class UserCRUD:
         return result.unique().scalar_one_or_none()
 
     @staticmethod
-    async def get_roles(async_transaction : AsyncSession):
+    async def get_roles(async_transaction: AsyncSession):
         query = select(Role)
+
+        result = await async_transaction.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def get_permissions(async_transaction: AsyncSession):
+        query = select(Permission)
 
         result = await async_transaction.execute(query)
         return result.scalars()

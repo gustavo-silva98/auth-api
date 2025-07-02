@@ -10,7 +10,7 @@ from settings import Settings
 
 
 class JWTHandler(Protocol):
-    def encode(self, payload: dict, key: str, algorithm: str) -> str:
+    def encode(self, payload: dict, key: str, algorithm: str) -> bytes:
         ...   # pragma: no cover
 
     def decode(
@@ -25,7 +25,7 @@ class JWTHandler(Protocol):
 
 
 class JWTLibHandler(JWTHandler):
-    def encode(self, payload: dict, key: str, algorithm: str) -> str:
+    def encode(self, payload: dict, key: str, algorithm: str) -> bytes:
         encode = jwt.encode(payload, key, algorithm)
         return encode
 
