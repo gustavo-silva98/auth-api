@@ -60,7 +60,7 @@ class UserCRUD:
         query = select(User)
 
         result = await async_transaction.execute(query)
-        return result.scalars()
+        return result.scalars().all()
 
     @staticmethod
     async def get_permission_by_name(
@@ -192,11 +192,11 @@ class UserCRUD:
         query = select(Role)
 
         result = await async_transaction.execute(query)
-        return result.scalars()
+        return result.scalars().all()
 
     @staticmethod
     async def get_permissions(async_transaction: AsyncSession):
         query = select(Permission)
 
         result = await async_transaction.execute(query)
-        return result.scalars()
+        return result.scalars().all()
