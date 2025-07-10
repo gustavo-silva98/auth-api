@@ -290,6 +290,7 @@ class AuthService:
             payload = self.token_service.jwt_handler.decode(
                 token, self.settings.SECRET_KEY, self.settings.ALGORITHM
             )
+
             username = payload.get('sub')
             if username is None:
                 raise UnauthorizedException()

@@ -1,7 +1,9 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from fastapi.security import OAuth2PasswordRequestForm
+from jwt import PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +16,7 @@ from domain_entity.exceptions import (
     UnauthorizedException,
     UserNotFound,
 )
-from domain_entity.models import Role, User
+from domain_entity.models import RevokedRefreshToken, Role, User
 from domain_entity.schemas import (
     CreateRoleDTO,
     PermissionItemDTO,
@@ -30,6 +32,17 @@ Métodos AuthService
 - create_user_from_route - OK
 - login_user_from_route - OK
 """
+
+
+@pytest.fixture
+def get_revoked_refresh_token():
+    return RevokedRefreshToken(
+        id=1,
+        token_id=1,
+        user_id=1,
+        expires_at=datetime(year=2020, month=1, day=1, hour=12, minute=0),
+        revoked_at=datetime(year=2020, month=1, day=1, hour=12, minute=0),
+    )
 
 
 @pytest.fixture
@@ -70,6 +83,15 @@ def mock_user_from_db():
         email='email@teste.com',
         fullname='Fullname Teste',
     )
+
+
+@pytest.fixture
+def get_decode_token():
+    return {
+        'sub': 'username',
+        'token_type': 'refresh',
+        'jti': '123',
+    }
 
 
 @pytest.fixture
@@ -360,6 +382,76 @@ async def testa_refresh_access_token_user_not_found(
         await auth_service.refresh_access_token('refresh_teste')
 
 
+async def testa_refresh_access_token_revoked(
+    get_token_service, get_auth_service, get_revoked_refresh_token
+):
+    token_service = get_token_service
+    auth_service = get_auth_service
+    jwt_hand = token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+
+    jwt_hand.decode.return_value = {
+        'sub': 'username',
+        'token_type': 'refresh',
+        'jti': '123',
+    }
+
+    auth_service.user_crud.is_token_revoked = AsyncMock(
+        return_value=get_revoked_refresh_token
+    )
+    with pytest.raises(UnauthorizedException):
+        await auth_service.refresh_access_token('refresh_teste')
+
+
+"""
+
+async def testa_refresh_access_valid(
+    get_token_service, get_auth_service, mock_user_class
+):
+    token_service = get_token_service
+    auth_service = get_auth_service
+    jwt_hand = token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+
+    jwt_hand.decode.return_value = {
+        'sub': 'username',
+        'token_type': 'refresh',
+        'jti': '123',
+    }
+
+    auth_service.user_crud.is_token_revoked = AsyncMock(
+        return_value=None)
+    auth_service.user_crud.get_user_by_username = AsyncMock(
+        return_value=mock_user_class)
+"""
+# TODO Terminar o teste de refresh access token
+
+
+async def testa_get_users_me_none(get_auth_service):
+    auth_service = get_auth_service
+
+    auth_service.token_service = AsyncMock(spec=JWTTokenService)
+    auth_service.token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+
+    auth_service.token_service.jwt_handler.decode = Mock(
+        return_value={'sub': None}
+    )
+
+    with pytest.raises(UnauthorizedException):
+        await auth_service.get_users_me('token_teste')
+
+
+async def testa_get_users_me_py(get_auth_service, get_decode_token):
+    auth_service = get_auth_service
+
+    auth_service.token_service = AsyncMock(spec=JWTTokenService)
+    auth_service.token_service.jwt_handler = AsyncMock(spec=JWTLibHandler)
+
+    auth_service.token_service.jwt_handler.decode.side_effect = PyJWTError(
+        'Token invalido'
+    )
+    with pytest.raises(UnauthorizedException):
+        await auth_service.get_users_me('token_teste')
+
+
 async def testa_delete_role_by_id_valid(get_auth_service):
     auth_service = get_auth_service
     auth_service.user_crud = AsyncMock(spec=UserCRUD)
@@ -439,3 +531,15 @@ async def testa_create_roles_with_permissions_invalid(get_auth_service):
 
     with pytest.raises(BadRequest):
         await auth_service.create_roles_with_permissions(create_role)
+
+
+async def testa_get_users(get_auth_service, mock_user_class):
+    auth_service = get_auth_service
+    mock_return = mock_user_class
+    auth_service.user_crud = AsyncMock(spec=UserCRUD)
+
+    auth_service.user_crud.get_users = AsyncMock(return_value=mock_return)
+
+    assert await auth_service.get_users() == [
+        UserFromDBDTO.model_validate(mock_return)
+    ]
