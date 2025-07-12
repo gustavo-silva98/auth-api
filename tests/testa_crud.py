@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
@@ -175,7 +175,7 @@ async def testa_insert_permission(get_db, get_perm):
     perm = get_perm
 
     user_crud = UserCRUD()
-    mock_db.add = AsyncMock(return_value=perm)
+    mock_db.add = MagicMock(return_value=perm)
 
     assert (
         await user_crud.insert_permission(
@@ -190,7 +190,7 @@ async def testa_revoke_token(get_db, get_revoked_refresh_token):
     token = get_revoked_refresh_token
 
     user_crud = UserCRUD()
-    mock_db.add = AsyncMock(return_value=token)
+    mock_db.add = MagicMock(return_value=token)
 
     assert (
         await user_crud.revoke_token(
@@ -205,7 +205,7 @@ async def testa_insert_role(get_db, get_role):
     role = get_role
 
     user_crud = UserCRUD()
-    mock_db.add = AsyncMock(return_value=role)
+    mock_db.add = Mock(return_value=role)
 
     assert (
         await user_crud.insert_role(role=role, async_transaction=mock_db)

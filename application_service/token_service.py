@@ -10,7 +10,7 @@ from settings import Settings
 
 
 class JWTHandler(Protocol):
-    def encode(self, payload: dict, key: str, algorithm: str) -> bytes:
+    def encode(self, payload: dict, key: str, algorithm: str) -> str:
         ...   # pragma: no cover
 
     def decode(
@@ -25,7 +25,7 @@ class JWTHandler(Protocol):
 
 
 class JWTLibHandler(JWTHandler):
-    def encode(self, payload: dict, key: str, algorithm: str) -> bytes:
+    def encode(self, payload: dict, key: str, algorithm: str) -> Any:
         encode = jwt.encode(payload, key, algorithm)
         return encode
 
@@ -100,8 +100,15 @@ class JWTTokenService(TokenService):
 
         if expires_delta:
             expire = datetime.now(UTC) + expires_delta
+        else:
+            raise BadRequest()
 
-        to_encode = {'sub': username, 'exp': expire, 'token_type': 'refresh'}
+        to_encode = {
+            'sub': username,
+            'exp': str(int(expire.timestamp())),
+            'token_type': 'refresh',
+        }
+
         to_encode['jti'] = str(uuid4())
 
         encoded_jwt = self.jwt_handler.encode(
