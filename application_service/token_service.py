@@ -5,7 +5,7 @@ from uuid import uuid4
 import jwt
 from jwt import PyJWTError
 
-from domain_entity.exceptions import UnauthorizedException
+from domain_entity.exceptions import BadRequest, UnauthorizedException
 from settings import Settings
 
 
@@ -81,6 +81,8 @@ class JWTTokenService(TokenService):
 
         if expires_delta:
             expire = datetime.now(UTC) + expires_delta
+        else:
+            raise (BadRequest())
 
         to_encode['exp'] = str(int(expire.timestamp()))
         to_encode['token_type'] = 'access'  # nosec: B105

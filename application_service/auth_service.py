@@ -90,18 +90,18 @@ class AuthServiceProtocol(Protocol):
     async def revoke_token(self, token: str, user_id: int) -> dict:
         ...   # pragma: no cover
 
-    async def return_role_by_id(self, role_id: int):
+    async def return_role_by_id(self, role_id: int) -> RolePermsFromDBDTO:
         ...   # pragma: no cover
 
     async def get_roles(
         self,
-    ):
+    ) -> list:
         ...   # pragma: no cover
 
-    async def get_permissions(self):
+    async def get_permissions(self) -> list:
         ...   # pragma: no cover
 
-    async def delete_permission_by_id(self, permission_id):
+    async def delete_permission_by_id(self, permission_id) -> dict:
         ...   # pragma: no cover
 
 
@@ -484,7 +484,7 @@ class AuthService:
         except PyJWTError as err:
             raise BadRequest() from err
 
-    async def return_role_by_id(self, role_id: int):
+    async def return_role_by_id(self, role_id: int) -> RolePermsFromDBDTO:
         get_role = await self.user_crud.get_role_by_id(
             role_id=role_id, async_transaction=self.db
         )
@@ -494,7 +494,7 @@ class AuthService:
         else:
             raise BadRequest('Role não encontrada')
 
-    async def get_roles(self):
+    async def get_roles(self) -> list:
         get_roles = await self.user_crud.get_roles(async_transaction=self.db)
         if not get_roles:
             return []
@@ -502,7 +502,7 @@ class AuthService:
             get_roles = [get_roles]
         return [RoleFromDBDTO.model_validate(i) for i in get_roles]
 
-    async def get_permissions(self):
+    async def get_permissions(self) -> list:
         get_permissions = await self.user_crud.get_permissions(self.db)
         if not get_permissions:
             return []
@@ -512,7 +512,7 @@ class AuthService:
 
         return [PermissionFromDBDTO.model_validate(i) for i in get_permissions]
 
-    async def delete_permission_by_id(self, permission_id):
+    async def delete_permission_by_id(self, permission_id) -> dict:
         delete = await self.user_crud.delete_perm_by_id(
             perm_id=permission_id, async_transaction=self.db
         )
